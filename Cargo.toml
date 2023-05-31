@@ -2,7 +2,17 @@
 name = "b4s"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Alex Povel <rust@alexpovel.de>"]
+description = "Binary Search Single Sorted String: Perform binary search on a single, delimited string slice of sorted but unevenly sized substrings."
+license-file = "LICENSE"
+repository = "https://github.com/alexpovel/b4s"
+readme = "README.md"
+documentation = "https://docs.rs/b4s"
+keywords = ["search", "binary search", "string", "str", "uneven"]
+categories = ["algorithms"]
 
 [dependencies]
+itertools = "0.10.5"
+
+[dev-dependencies]
+rstest = "0.17.0"
