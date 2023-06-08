@@ -13,7 +13,7 @@
 //! string slice of sorted but unevenly sized substrings.
 
 use itertools::Itertools;
-use std::{cmp::Ordering, error::Error};
+use std::{cmp::Ordering, error::Error, fmt::Display};
 
 /// Main type to perform binary search through.
 ///
@@ -39,6 +39,44 @@ use std::{cmp::Ordering, error::Error};
 pub struct SortedString<'a> {
     string: &'a str,
     sep: char,
+}
+
+/// The result of a [`SortedString::binary_search()`].
+///
+/// In the success case, the location where the match was found.
+/// In the error case, an appropriate error.
+pub type SearchResult = Result<Span, SearchError>;
+
+/// Error returned in case of an unsuccessful search.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchError {
+    /// The needle was not found.
+    NotFound(
+        /// Location of the last *unsuccessful* comparison.
+        ///
+        /// This is *not* the location where the needle could be inserted. That location
+        /// is either to the left *or* right of this location, depending on how
+        /// [comparison](https://doc.rust-lang.org/std/primitive.str.html#impl-PartialOrd%3Cstr%3E-for-str)
+        /// goes. As this error is not particularly actionable at runtime, the exact
+        /// location (left, right) is not reported, saving computation at runtime.
+        Span,
+    ),
+    /// An internal encoding error occurred when slicing UTF8 from raw bytes.
+    /// Should never happen, but variant exists to prevent panics.
+    EncodingError,
+}
+
+impl Error for SearchError {}
+
+impl Display for SearchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SearchError::NotFound(span) => {
+                write!(f, "Not found, last unsuccessful comparison at {span:?}")
+            }
+            SearchError::EncodingError => write!(f, "Encoding error"),
+        }
+    }
 }
 
 impl<'a> SortedString<'a> {
@@ -160,7 +198,9 @@ impl<'a> SortedString<'a> {
     /// returning a [`Result`]. The success case is a [`Span`], not a single [`usize`],
     /// as the haystack is variable-length. For the error case, see below.
     ///
-    /// For examples, see the [crate]-wide documentation.
+    /// # Examples
+    ///
+    ///
     ///
     /// # Errors
     ///
@@ -168,9 +208,9 @@ impl<'a> SortedString<'a> {
     /// would have had to be, and where it could be inserted.
     ///
     /// The special-case result of `Err(usize::MAX)` indicates that UTF-8 conversions
-    /// went wrong. It's an ugly API that might be improved in the future.
-    ///
-    pub fn binary_search<U>(&self, needle: U) -> Result<Span, usize>
+    /// went wrong. It's an ugly API that might be improved in the future. Its purpose
+    /// is to avoid panics, giving the user a chance to recover.
+    pub fn binary_search<U>(&self, needle: U) -> SearchResult
     where
         U: AsRef<str>,
     {
@@ -183,28 +223,28 @@ impl<'a> SortedString<'a> {
         let mut low = leftmost;
         let mut high = rightmost;
 
-        // Working with UTF-8 is hard: we either have to linearly scan the entire string
-        // each time, *or* note down (at instance creation) the byte offsets of each
-        // separator. We don't do either, and impose some other restrictions, but that
-        // allows us to use bytes here.
+        let mut start = leftmost;
+        let mut end = rightmost;
+
         let haystack = haystack.as_bytes();
+
+        let pred = |c: &&u8| **c == self.sep as u8;
 
         while low < high {
             let mid = low + (high - low) / 2;
 
-            let pred = |c: &&u8| **c == self.sep as u8;
-
-            let start = match haystack[..mid].iter().rev().find_position(pred) {
+            start = match haystack[..mid].iter().rev().find_position(pred) {
                 Some((delta, _)) => mid - delta,
                 None => leftmost,
             };
 
-            let end = match haystack[mid..].iter().find_position(pred) {
+            end = match haystack[mid..].iter().find_position(pred) {
                 Some((delta, _)) => mid + delta,
                 None => rightmost,
             };
 
-            let Ok(haystack_word) = std::str::from_utf8(&haystack[start..end]) else { return Err(usize::MAX) };
+            let Ok(haystack_word) = std::str::from_utf8(&haystack[start..end])
+                else { return Err(SearchError::EncodingError) };
 
             match needle.cmp(haystack_word) {
                 Ordering::Less => high = mid.saturating_sub(1),
@@ -213,7 +253,7 @@ impl<'a> SortedString<'a> {
             }
         }
 
-        Err(low)
+        Err(SearchError::NotFound(Span(start, end)))
     }
 
     /// Creates an instance of [`SortedString`] without performing sanity checks.
@@ -235,14 +275,15 @@ impl<'a> SortedString<'a> {
     /// # Example: Incorrect Use
     ///
     /// ```
-    /// use b4s::SortedString;
+    /// use b4s::{SortedString, Span};
+    /// use b4s::SearchError::NotFound;
     ///
     /// let sep = ',';
     /// let unsorted_haystack = "a,c,b";
     /// let sorted_string = SortedString::new_unchecked(unsorted_haystack, sep);
     ///
     /// // Unable to find element in unsorted haystack
-    /// assert_eq!(sorted_string.binary_search("b"), Err(1));
+    /// assert_eq!(sorted_string.binary_search("b"), Err(NotFound(Span(0, 1))));
     /// ```
     #[must_use]
     pub fn new_unchecked(string: &'a str, sep: char) -> Self {
@@ -306,7 +347,7 @@ pub enum SortedStringCreationError {
 
 impl Error for SortedStringCreationError {}
 
-impl std::fmt::Display for SortedStringCreationError {
+impl Display for SortedStringCreationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NotSorted => write!(f, "The provided string is not sorted."),
@@ -318,7 +359,7 @@ impl std::fmt::Display for SortedStringCreationError {
 
 /// A span of `start` and `end` indices.
 ///
-/// Indicating the start and end of a substring in a haystack.
+/// Indicating the start and end of a substring in a haystack, **in raw byte indices**.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span(
     /// Start index of the substring.
