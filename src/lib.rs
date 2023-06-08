@@ -12,7 +12,8 @@
 //! Binary Search Single Sorted String: Perform binary search on a single, delimited
 //! string slice of sorted but unevenly sized substrings.
 
-use ascii::AsciiChar;
+#[doc(no_inline)] // https://users.rust-lang.org/t/re-exporting-type-and-rustdoc/50847
+pub use ascii::AsciiChar;
 use itertools::Itertools;
 use std::{cmp::Ordering, error::Error, fmt::Display};
 
