@@ -99,13 +99,6 @@ pub struct SortedString<'a> {
 /// ## Error case
 ///
 /// The location of the last *unsuccessful* comparison.
-///
-/// This is *not* the location where the needle could be inserted. That location is
-/// either to the left *or* right of this location, depending on how
-/// [comparison](https://doc.rust-lang.org/std/primitive.str.html#impl-PartialOrd%3Cstr%3E-for-str)
-/// goes. As this error is not particularly actionable at runtime, the exact location
-/// (left, right) is not reported, saving computation at runtime and affording a simpler
-/// implementation.
 pub type SearchResult = Result<Range<usize>, Range<usize>>;
 
 impl<'a> SortedString<'a> {
@@ -187,6 +180,18 @@ impl<'a> SortedString<'a> {
     /// [`usize`], as the haystack is variable-length. For the error case, see below.
     ///
     /// # Examples
+    ///
+    /// # Errors
+    ///
+    /// There is only a single error case: the needle is not found. In that case, the
+    /// location of the last *unsuccessful* comparison is returned.
+    ///
+    /// This is *not* the location where the needle could be inserted. That location is
+    /// either to the left *or* right of this location, depending on how
+    /// [comparison](https://doc.rust-lang.org/std/primitive.str.html#impl-PartialOrd%3Cstr%3E-for-str)
+    /// goes. As this error is not particularly actionable at runtime, the exact
+    /// location (left, right) is not reported, saving computation at runtime and
+    /// affording a simpler implementation.
     ///
     /// # Panics
     ///
