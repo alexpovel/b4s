@@ -243,7 +243,7 @@ impl<'a> SortedString<'a> {
     ///   **invalid UTF-8**:
     ///
     ///   ```
-    ///   for byte in 0b1000_0000u8..=0b1111_1111u8 {
+    ///   for byte in 0x80u8..=0xFFu8 {
     ///       assert!(!byte.is_ascii());
     ///       assert!(std::str::from_utf8(&[byte]).is_err());
     ///   }
@@ -251,10 +251,17 @@ impl<'a> SortedString<'a> {
     ///
     /// ### Fuzz Testing
     ///
-    /// To further strengthen confidence in panic-freedom,  testing was conducted using
-    /// [`afl`](https://crates.io/crates/afl). Run it yourself with `cargo install just
-    /// && just fuzz`. The author let a fuzz test run for over 5 billion iterations,
-    /// finding no panics:
+    /// To further strengthen confidence in panic-freedom, fuzz testing was conducted
+    /// using [`afl`](https://crates.io/crates/afl).
+    ///
+    /// If you have access to the crate's source code repository, run fuzz testing
+    /// yourself from the root using
+    ///
+    /// ```bash
+    /// cargo install just && just fuzz
+    /// ```
+    ///
+    /// The author let a fuzz test run for over 5 billion iterations, finding no panics:
     ///
     /// ```text
     ///      american fuzzy lop ++4.06c {default} (target/debug/afl-target) [fast]
@@ -286,10 +293,10 @@ impl<'a> SortedString<'a> {
     /// Note: at the time of writing,
     /// [`cargo-fuzz`](https://github.com/rust-fuzz/cargo-fuzz) and
     /// [`cargo-afl`](https://github.com/rust-fuzz/afl.rs) were available. The former
-    /// works with [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html), the latter with
-    /// [`afl`](https://github.com/google/AFL). **Both were already deprecated** at the
-    /// time of writing, but continue to work well. `afl` was chosen as it didn't
-    /// require a nightly toolchain.
+    /// currently only wraps [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html), the
+    /// latter works with [`afl`](https://github.com/google/AFL). **Both were already
+    /// deprecated** at the time of writing, but continue to work well. `afl` was chosen
+    /// as it didn't require a nightly toolchain.
     pub fn binary_search<U>(&self, needle: U) -> SearchResult
     where
         U: AsRef<str>,
