@@ -15,7 +15,7 @@
 #[doc(no_inline)] // https://users.rust-lang.org/t/re-exporting-type-and-rustdoc/50847
 pub use ascii::AsciiChar;
 use itertools::Itertools;
-use std::{cmp::Ordering, error::Error, fmt::Display};
+use std::{cmp::Ordering, error::Error, fmt::Display, ops::Range};
 
 /// Main type to perform binary search through.
 ///
@@ -106,7 +106,7 @@ pub struct SortedString<'a> {
 /// goes. As this error is not particularly actionable at runtime, the exact location
 /// (left, right) is not reported, saving computation at runtime and affording a simpler
 /// implementation.
-pub type SearchResult = Result<Span, Span>;
+pub type SearchResult = Result<Range<usize>, Range<usize>>;
 
 impl<'a> SortedString<'a> {
     /// Creates a new instance of [`SortedString`], performing sanity checks.
@@ -183,8 +183,8 @@ impl<'a> SortedString<'a> {
     ///
     /// The return type aims to imitate [`binary_search` of the standard
     /// library](https://doc.rust-lang.org/std/primitive.slice.html#method.binary_search),
-    /// returning a [`Result`]. The success case is a [`Span`], not a single [`usize`],
-    /// as the haystack is variable-length. For the error case, see below.
+    /// returning a [`Result`]. The success case is a [`std::ops::Range`], not a single
+    /// [`usize`], as the haystack is variable-length. For the error case, see below.
     ///
     /// # Examples
     ///
@@ -328,12 +328,12 @@ impl<'a> SortedString<'a> {
 
             match needle.cmp(haystack_word) {
                 Ordering::Less => high = mid.saturating_sub(1),
-                Ordering::Equal => return Ok(Span(start, end)),
+                Ordering::Equal => return Ok(Range { start, end }),
                 Ordering::Greater => low = mid + 1,
             }
         }
 
-        Err(Span(start, end))
+        Err(Range { start, end })
     }
 
     /// Creates an instance of [`SortedString`] without performing sanity checks.
@@ -357,14 +357,15 @@ impl<'a> SortedString<'a> {
     ///
     /// ```
     /// use ascii::AsciiChar;
-    /// use b4s::{SortedString, Span};
+    /// use b4s::{SortedString};
+    /// use std::ops::Range;
     ///
     /// let sep = AsciiChar::Comma;
     /// let unsorted_haystack = "a,c,b";
     /// let sorted_string = SortedString::new_unchecked(unsorted_haystack, sep);
     ///
     /// // Unable to find element in unsorted haystack
-    /// assert_eq!(sorted_string.binary_search("b"), Err(Span(0, 1)));
+    /// assert_eq!(sorted_string.binary_search("b"), Err(Range { start: 0, end: 1 }));
     /// ```
     #[must_use]
     pub fn new_unchecked(string: &'a str, sep: AsciiChar) -> Self {
@@ -382,7 +383,8 @@ impl<'a> SortedString<'a> {
     ///
     /// ```
     /// use ascii::AsciiChar;
-    /// use b4s::{SortedString, Span};
+    /// use b4s::{SortedString};
+    /// use std::ops::Range;
     ///
     /// let sep = AsciiChar::LineFeed;
     /// // Perhaps this was read directly from a file, where sorting is unreliable/unknown.
@@ -392,9 +394,8 @@ impl<'a> SortedString<'a> {
     /// // Passes fine
     /// let sorted_string = SortedString::new_checked(&sorted_haystack, sep).unwrap();
     ///
-    /// assert_eq!(sorted_string.binary_search("c"), Ok(Span(4, 5)));
+    /// assert_eq!(sorted_string.binary_search("c"), Ok(Range { start: 4, end: 5 }));
     /// ```
-    ///
     #[must_use]
     pub fn sort(string: &str, sep: AsciiChar) -> String {
         string
@@ -433,24 +434,5 @@ impl Display for SortedStringCreationError {
             Self::NotSorted => write!(f, "The provided string is not sorted."),
             Self::EmptyHaystack => write!(f, "The provided string is empty."),
         }
-    }
-}
-
-/// A span of `start` and `end` indices.
-///
-/// Indicating the start and end of a substring in a haystack, **in raw byte indices**.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Span(
-    /// Start index of the substring.
-    pub usize,
-    /// End index of the substring.
-    pub usize,
-);
-
-impl Error for Span {}
-
-impl Display for Span {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}, {})", self.0, self.1)
     }
 }

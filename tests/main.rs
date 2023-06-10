@@ -1,6 +1,7 @@
 use ascii::AsciiChar;
-use b4s::{SearchResult, SortedString, Span};
+use b4s::{SearchResult, SortedString};
 use rstest::rstest;
+use std::ops::Range;
 
 fn base_test(needle: &str, haystack: &str, sep: AsciiChar, expected: SearchResult) {
     let ss = SortedString::new_checked(haystack, sep).unwrap();
@@ -12,55 +13,55 @@ fn base_test(needle: &str, haystack: &str, sep: AsciiChar, expected: SearchResul
     "abc",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(0, 3))
+    Ok(Range { start: 0, end: 3 })
 )]
 #[case(
     "def",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(4, 7))
+    Ok(Range { start: 4, end: 7 })
 )]
 #[case(
     "ghi",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(8, 11))
+    Ok(Range { start: 8, end: 11 })
 )]
 #[case(
     "jkl",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(12, 15))
+    Ok(Range { start: 12, end: 15 })
 )]
 #[case(
     "mno",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(16, 19))
+    Ok(Range { start: 16, end: 19 })
 )]
 #[case(
     "pqr",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(20, 23))
+    Ok(Range { start: 20, end: 23 })
 )]
 #[case(
     "stu",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(24, 27))
+    Ok(Range { start: 24, end: 27 })
 )]
 #[case(
     "vwx",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(28, 31))
+    Ok(Range { start: 28, end: 31 })
 )]
 #[case(
     "yz",
     "abc,def,ghi,jkl,mno,pqr,stu,vwx,yz",
     AsciiChar::Comma,
-    Ok(Span(32, 34))
+    Ok(Range { start: 32, end: 34 })
 )]
 fn test_base_cases(
     #[case] needle: &str,
@@ -72,9 +73,9 @@ fn test_base_cases(
 }
 
 #[rstest]
-#[case("mn", "abc,mno,yz", AsciiChar::Comma, Err(Span(0, 3)))]
-#[case("a", "abc,def,yz", AsciiChar::Comma, Err(Span(0, 3)))]
-#[case("z", "abc,def,yz", AsciiChar::Comma, Err(Span(8, 10)))]
+#[case("mn", "abc,mno,yz", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
+#[case("a", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
+#[case("z", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 8, end: 10 }))]
 fn test_needle_shorter_than_any_haystack_item(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -85,9 +86,9 @@ fn test_needle_shorter_than_any_haystack_item(
 }
 
 #[rstest]
-#[case("abcd", "abc,def,yz", AsciiChar::Comma, Err(Span(0, 3)))]
-#[case("xyz", "abc,def,yz", AsciiChar::Comma, Err(Span(4, 7)))]
-#[case("zyz", "abc,def,yz", AsciiChar::Comma, Err(Span(8, 10)))]
+#[case("abcd", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
+#[case("xyz", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 4, end: 7 }))]
+#[case("zyz", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 8, end: 10 }))]
 fn test_needle_longer_than_any_haystack_item(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -98,7 +99,7 @@ fn test_needle_longer_than_any_haystack_item(
 }
 
 #[rstest]
-#[case("abc", "a,b,c", AsciiChar::Comma, Err(Span(0, 1)))]
+#[case("abc", "a,b,c", AsciiChar::Comma, Err(Range { start: 0, end: 1 }))]
 fn test_single_character_haystack(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -109,10 +110,10 @@ fn test_single_character_haystack(
 }
 
 #[rstest]
-#[case("a", "a,def,yz", AsciiChar::Comma, Ok(Span(0, 1)))]
-#[case("a", "abc,def,yz", AsciiChar::Comma, Err(Span(0, 3)))]
-#[case("z", "abc,def,z", AsciiChar::Comma, Ok(Span(8, 9)))]
-#[case("z", "abc,def,yz", AsciiChar::Comma, Err(Span(8, 10)))]
+#[case("a", "a,def,yz", AsciiChar::Comma, Ok(Range { start: 0, end: 1 }))]
+#[case("a", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
+#[case("z", "abc,def,z", AsciiChar::Comma, Ok(Range { start: 8, end: 9 }))]
+#[case("z", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 8, end: 10 }))]
 fn test_single_character_needle(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -123,9 +124,9 @@ fn test_single_character_needle(
 }
 
 #[rstest]
-#[case("a", "a,b,c", AsciiChar::Comma, Ok(Span(0, 1)))]
-#[case("c", "a,b,c", AsciiChar::Comma, Ok(Span(4, 5)))]
-#[case("d", "a,b,c", AsciiChar::Comma, Err(Span(4, 5)))]
+#[case("a", "a,b,c", AsciiChar::Comma, Ok(Range { start: 0, end: 1 }))]
+#[case("c", "a,b,c", AsciiChar::Comma, Ok(Range { start: 4, end: 5 }))]
+#[case("d", "a,b,c", AsciiChar::Comma, Err(Range { start: 4, end: 5 }))]
 fn test_single_character_needle_and_haystack(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -136,10 +137,10 @@ fn test_single_character_needle_and_haystack(
 }
 
 #[rstest]
-#[case("aaa", "aaa,def,yz", AsciiChar::Comma, Ok(Span(0, 3)))]
-#[case("aaa", "abc,def,yz", AsciiChar::Comma, Err(Span(0, 3)))]
-#[case("zzz", "abc,def,zzz", AsciiChar::Comma, Ok(Span(8, 11)))]
-#[case("zzz", "abc,def,yz", AsciiChar::Comma, Err(Span(8, 10)))]
+#[case("aaa", "aaa,def,yz", AsciiChar::Comma, Ok(Range { start: 0, end: 3 }))]
+#[case("aaa", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
+#[case("zzz", "abc,def,zzz", AsciiChar::Comma, Ok(Range { start: 8, end: 11 }))]
+#[case("zzz", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 8, end: 10 }))]
 fn test_repeated_character_needle(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -150,9 +151,9 @@ fn test_repeated_character_needle(
 }
 
 #[rstest]
-#[case("", ",", AsciiChar::Comma, Ok(Span(0, 0)))]
-#[case("", ",,", AsciiChar::Comma, Ok(Span(1, 1)))]
-#[case("", "abc", AsciiChar::Comma, Err(Span(0, 3)))]
+#[case("", ",", AsciiChar::Comma, Ok(Range { start: 0, end: 0 }))]
+#[case("", ",,", AsciiChar::Comma, Ok(Range { start: 1, end: 1 }))]
+#[case("", "abc", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
 fn test_empty_needle(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -163,11 +164,11 @@ fn test_empty_needle(
 }
 
 #[rstest]
-#[case("abc", "abc", AsciiChar::Comma, Ok(Span(0, 3)))]
-#[case("abc", "abc,def", AsciiChar::Comma, Ok(Span(0, 3)))]
-#[case("abc", ",", AsciiChar::Comma, Err(Span(0, 0)))]
-#[case("", ",,,,", AsciiChar::Comma, Ok(Span(2, 2)))]
-#[case("abc", ",,,abc", AsciiChar::Comma, Ok(Span(3, 6)))]
+#[case("abc", "abc", AsciiChar::Comma, Ok(Range { start: 0, end: 3 }))]
+#[case("abc", "abc,def", AsciiChar::Comma, Ok(Range { start: 0, end: 3 }))]
+#[case("abc", ",", AsciiChar::Comma, Err(Range { start: 0, end: 0 }))]
+#[case("", ",,,,", AsciiChar::Comma, Ok(Range { start: 2, end: 2 }))]
+#[case("abc", ",,,abc", AsciiChar::Comma, Ok(Range { start: 3, end: 6 }))]
 fn test_oddly_shaped_haystack(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -178,8 +179,8 @@ fn test_oddly_shaped_haystack(
 }
 
 #[rstest]
-#[case("nmo", "abc,mno,yz", AsciiChar::Comma, Err(Span(4, 7)))]
-#[case("cba", "abc,def,yz", AsciiChar::Comma, Err(Span(0, 3)))]
+#[case("nmo", "abc,mno,yz", AsciiChar::Comma, Err(Range { start: 4, end: 7 }))]
+#[case("cba", "abc,def,yz", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
 fn test_switched_characters_needle(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -190,9 +191,9 @@ fn test_switched_characters_needle(
 }
 
 #[rstest]
-#[case("abc", "abc-def-yz", AsciiChar::Minus, Ok(Span(0, 3)))]
-#[case("abc", "abc\0def\0yz", AsciiChar::Null, Ok(Span(0, 3)))]
-#[case("defg", "abc\0def\0yz", AsciiChar::Null, Err(Span(4, 7)))]
+#[case("abc", "abc-def-yz", AsciiChar::Minus, Ok(Range { start: 0, end: 3 }))]
+#[case("abc", "abc\0def\0yz", AsciiChar::Null, Ok(Range { start: 0, end: 3 }))]
+#[case("defg", "abc\0def\0yz", AsciiChar::Null, Err(Range { start: 4, end: 7 }))]
 fn test_different_separators(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -203,11 +204,11 @@ fn test_different_separators(
 }
 
 #[rstest]
-#[case("abc", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Err(Span(11, 15)))]
-#[case("ABC", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Err(Span(0, 4)))]
-#[case("Hund", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Ok(Span(0, 4)))]
-#[case("Katze", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Ok(Span(5, 10)))]
-#[case("Maus", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Ok(Span(11, 15)))]
+#[case("abc", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Err(Range { start: 11, end: 15 }))]
+#[case("ABC", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Err(Range { start: 0, end: 4 }))]
+#[case("Hund", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Ok(Range { start: 0, end: 4 }))]
+#[case("Katze", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Ok(Range { start: 5, end: 10 }))]
+#[case("Maus", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Ok(Range { start: 11, end: 15 }))]
 fn test_real_world_examples(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -218,13 +219,13 @@ fn test_real_world_examples(
 }
 
 #[rstest]
-#[case("Hündin", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Err(Span(5, 10)))]
-#[case("Hündin", "Hündin\nKatze\nMaus", AsciiChar::LineFeed, Ok(Span(0, 7)))]
+#[case("Hündin", "Hund\nKatze\nMaus", AsciiChar::LineFeed, Err(Range { start: 5, end: 10 }))]
+#[case("Hündin", "Hündin\nKatze\nMaus", AsciiChar::LineFeed, Ok(Range { start: 0, end: 7 }))]
 #[case(
     "Mäuschen",
     "Hündin\nKatze\nMäuschen",
     AsciiChar::LineFeed,
-    Ok(Span(14, 23))
+    Ok(Range { start: 14, end: 23 })
 )]
 fn test_real_world_examples_with_multibyte_characters(
     #[case] needle: &str,
@@ -240,13 +241,13 @@ fn test_real_world_examples_with_multibyte_characters(
     "Abdämpfung",
     "Abdämpfung\nAbenteuer\nAbschluss",
     AsciiChar::LineFeed,
-    Ok(Span(0, 11))
+    Ok(Range { start: 0, end: 11 })
 )]
 #[case(
     "Abdämpfung",
     "Abdrehen\nAbdämpfung\nAbschluss",
     AsciiChar::LineFeed,
-    Ok(Span(9, 20))
+    Ok(Range { start: 9, end: 20 })
 )]
 fn test_real_world_examples_with_common_prefixes(
     #[case] needle: &str,
@@ -258,7 +259,7 @@ fn test_real_world_examples_with_common_prefixes(
 }
 
 #[rstest]
-#[case("abc,def", "abc,def,ghi", AsciiChar::Comma, Err(Span(0, 3)))]
+#[case("abc,def", "abc,def,ghi", AsciiChar::Comma, Err(Range { start: 0, end: 3 }))]
 fn test_needle_contains_separator(
     #[case] needle: &str,
     #[case] haystack: &str,
@@ -269,7 +270,7 @@ fn test_needle_contains_separator(
 }
 
 #[rstest]
-#[case("", ",a", AsciiChar::Comma, Ok(Span(0, 0)))]
+#[case("", ",a", AsciiChar::Comma, Ok(Range { start: 0, end: 0 }))]
 #[should_panic]
 fn test_buggy_cases_to_be_fixed(
     #[case] needle: &str,
