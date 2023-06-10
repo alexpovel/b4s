@@ -1,7 +1,7 @@
 use afl::fuzz;
 use arbitrary::{Arbitrary, Unstructured};
 use b4s::AsciiChar;
-use std::{fmt::Display, fs::OpenOptions, io::Write};
+use std::{fmt::Display, fs::OpenOptions};
 
 /// Input signature for fuzzing.
 ///
@@ -51,7 +51,7 @@ fn unstructured_to_ascii_char(u: &mut Unstructured) -> arbitrary::Result<AsciiCh
 fn main() {
     let filename = "fuzz-inputs.txt";
 
-    let mut data_file = OpenOptions::new()
+    let mut _data_file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(filename)
@@ -62,19 +62,13 @@ fn main() {
         // Don't care for matches here anyway, just want to see if we panic.
         let ss = b4s::SortedString::new_unchecked(&data.haystack, data.separator);
 
-        let res = ss.binary_search(&data.needle);
-
-        if let Err(b4s::SearchError::EncodingError) = res {
-            // https://github.com/rust-fuzz/afl.rs/issues/215#issuecomment-1039707502
-            println!("{data}");
-            panic!("Got encoding error");
-        }
+        let _ = ss.binary_search(&data.needle);
 
         // It's not easy to get insight into the input data unless a panic occurred, so
         // write it out. This costs c. 20% in throughput performance. Comment out once
         // you're convinced results are good.
-        data_file
-            .write_all(format!("{data}\n").as_bytes())
-            .expect("Cannot write to data file.");
+        // _data_file
+        //     .write_all(format!("{data}\n").as_bytes())
+        //     .expect("Cannot write to data file.");
     });
 }

@@ -91,41 +91,22 @@ pub struct SortedString<'a> {
 
 /// The result of a [`SortedString::binary_search()`].
 ///
-/// In the success case, the location where the match was found.
-/// In the error case, an appropriate error.
-pub type SearchResult = Result<Span, SearchError>;
-
-/// Error returned in case of an unsuccessful search.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SearchError {
-    /// The needle was not found.
-    NotFound(
-        /// Location of the last *unsuccessful* comparison.
-        ///
-        /// This is *not* the location where the needle could be inserted. That location
-        /// is either to the left *or* right of this location, depending on how
-        /// [comparison](https://doc.rust-lang.org/std/primitive.str.html#impl-PartialOrd%3Cstr%3E-for-str)
-        /// goes. As this error is not particularly actionable at runtime, the exact
-        /// location (left, right) is not reported, saving computation at runtime.
-        Span,
-    ),
-    /// An internal encoding error occurred when slicing UTF8 from raw bytes.
-    /// Should never happen, but variant exists to prevent panics.
-    EncodingError,
-}
-
-impl Error for SearchError {}
-
-impl Display for SearchError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SearchError::NotFound(span) => {
-                write!(f, "Not found, last unsuccessful comparison at {span:?}")
-            }
-            SearchError::EncodingError => write!(f, "Encoding error"),
-        }
-    }
-}
+///
+/// ## Success case
+///
+/// The location where the match was found.
+///
+/// ## Error case
+///
+/// The location of the last *unsuccessful* comparison.
+///
+/// This is *not* the location where the needle could be inserted. That location is
+/// either to the left *or* right of this location, depending on how
+/// [comparison](https://doc.rust-lang.org/std/primitive.str.html#impl-PartialOrd%3Cstr%3E-for-str)
+/// goes. As this error is not particularly actionable at runtime, the exact location
+/// (left, right) is not reported, saving computation at runtime and affording a simpler
+/// implementation.
+pub type SearchResult = Result<Span, Span>;
 
 impl<'a> SortedString<'a> {
     /// Creates a new instance of [`SortedString`], performing sanity checks.
@@ -207,16 +188,96 @@ impl<'a> SortedString<'a> {
     ///
     /// # Examples
     ///
+    /// # Panics
     ///
+    /// This method panics when slicing into the `haystack` fails. Occurrences of such
+    /// panics are bugs. Please report them.
     ///
-    /// # Errors
+    /// The panic allows the API to be simple. No panic implies converting the failure
+    /// to some error value, like an `enum`. That `enum` would then have a variant such
+    /// as `EncodingError`. However, the user would have no sensible way of handling
+    /// that, either, and might as well panic anyway. Keeping the panic inside the
+    /// function allows the return type to be very simple (no `enum` required).
     ///
-    /// This method returns a [`usize`] in the error case, indicating where the needle
-    /// would have had to be, and where it could be inserted.
+    /// See also [this
+    /// thread](https://web.archive.org/web/20230610095730/https://old.reddit.com/r/rust/comments/we33nd/when_is_unwrap_idiomatic/iinvqqh/?context=3),
+    /// where people who know what they're talking about in terms of Rust
+    /// ([matklad](https://github.com/matklad),
+    /// [BurntSushi](https://github.com/BurntSushi)) argue in a similar fashion. The
+    /// author [took their
+    /// advice](https://en.wikipedia.org/wiki/Argument_from_authority) to gauge
+    /// idiomaticity.
     ///
-    /// The special-case result of `Err(usize::MAX)` indicates that UTF-8 conversions
-    /// went wrong. It's an ugly API that might be improved in the future. Its purpose
-    /// is to avoid panics, giving the user a chance to recover.
+    /// ## Background
+    ///
+    /// Fundamental assumptions for panic-freedom are:
+    ///
+    /// - The haystack is `&str`, aka valid UTF-8. **Users cannot pass malformed
+    ///   UTF-8.**
+    /// - The separator is ASCII, as ensured by signatures working off [`AsciiChar`],
+    ///   providing type-level guarantees. **Users can only pass single-byte UTF-8
+    ///   values.**
+    /// - The separator being ASCII ([highest bit
+    ///   0](https://en.wikipedia.org/wiki/ASCII#8-bit_codes)), it cannot be part of any
+    ///   code point encoded as [multiple bytes using UTF-8 (highest bit
+    ///   1)](https://en.wikipedia.org/wiki/UTF-8#Encoding), as
+    ///   [validated](https://doc.rust-lang.org/std/primitive.char.html#validity) in
+    ///   this sanity check:
+    ///
+    ///      ```
+    ///      for code_point in 0..=0x10FFFF {
+    ///          if let Some(c) = std::char::from_u32(code_point) {
+    ///              if c.is_ascii() {
+    ///                  continue;
+    ///              }
+    ///              for byte in c.to_string().bytes() {
+    ///                  assert!(!byte.is_ascii());
+    ///              }
+    ///          }
+    ///      }
+    ///      ```
+    ///
+    /// ### Fuzzy Testing
+    ///
+    /// To further strengthen confidence in panic-freedom, fuzzy testing was conducted
+    /// using [`afl`](https://crates.io/crates/afl). Run it yourself with `cargo install
+    /// just && just fuzz`. The author let a fuzz test run for over 5 billion
+    /// iterations, finding no panics:
+    ///
+    /// ```text
+    ///      american fuzzy lop ++4.06c {default} (target/debug/afl-target) [fast]
+    /// ┌─ process timing ────────────────────────────────────┬─ overall results ────┐
+    /// │        run time : 0 days, 19 hrs, 7 min, 6 sec      │  cycles done : 192k  │
+    /// │   last new find : 0 days, 18 hrs, 56 min, 54 sec    │ corpus count : 39    │
+    /// │last saved crash : none seen yet                     │saved crashes : 0     │
+    /// │ last saved hang : none seen yet                     │  saved hangs : 0     │
+    /// ├─ cycle progress ─────────────────────┬─ map coverage┴──────────────────────┤
+    /// │  now processing : 31.444679 (79.5%)  │    map density : 3.31% / 6.22%      │
+    /// │  runs timed out : 0 (0.00%)          │ count coverage : 2.77 bits/tuple    │
+    /// ├─ stage progress ─────────────────────┼─ findings in depth ─────────────────┤
+    /// │  now trying : splice 8               │ favored items : 12 (30.77%)         │
+    /// │ stage execs : 27/28 (96.43%)         │  new edges on : 14 (35.90%)         │
+    /// │ total execs : 5.15G                  │ total crashes : 0 (0 saved)         │
+    /// │  exec speed : 73.5k/sec              │  total tmouts : 2 (0 saved)         │
+    /// ├─ fuzzing strategy yields ────────────┴─────────────┬─ item geometry ───────┤
+    /// │   bit flips : disabled (default, enable with -D)   │    levels : 6         │
+    /// │  byte flips : disabled (default, enable with -D)   │   pending : 0         │
+    /// │ arithmetics : disabled (default, enable with -D)   │  pend fav : 0         │
+    /// │  known ints : disabled (default, enable with -D)   │ own finds : 33        │
+    /// │  dictionary : n/a                                  │  imported : 0         │
+    /// │havoc/splice : 31/1.98G, 2/3.17G                    │ stability : 100.00%   │
+    /// │py/custom/rq : unused, unused, 0/1126, 0/19.4k      ├───────────────────────┘
+    /// │    trim/eff : 1.58%/6355, disabled                 │          [cpu003: 12%]
+    /// └────────────────────────────────────────────────────┘
+    /// ```
+    ///
+    /// Note: at the time of writing,
+    /// [`cargo-fuzz`](https://github.com/rust-fuzz/cargo-fuzz) and
+    /// [`cargo-afl`](https://github.com/rust-fuzz/afl.rs) were available. The former
+    /// works with [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html), the latter
+    /// with [`afl`](https://github.com/google/AFL). **Both were already deprecated**
+    /// at the time of writing, but continue to work well. `afl` was chosen as it
+    /// didn't require a nightly toolchain.
     pub fn binary_search<U>(&self, needle: U) -> SearchResult
     where
         U: AsRef<str>,
@@ -250,8 +311,8 @@ impl<'a> SortedString<'a> {
                 None => rightmost,
             };
 
-            let Ok(haystack_word) = std::str::from_utf8(&haystack[start..end])
-                else { return Err(SearchError::EncodingError) };
+            let haystack_word = std::str::from_utf8(&haystack[start..end])
+                .expect("Indices aren't valid for slicing into haystack. They are at ASCII chars and therefore always assumed valid.");
 
             match needle.cmp(haystack_word) {
                 Ordering::Less => high = mid.saturating_sub(1),
@@ -260,7 +321,7 @@ impl<'a> SortedString<'a> {
             }
         }
 
-        Err(SearchError::NotFound(Span(start, end)))
+        Err(Span(start, end))
     }
 
     /// Creates an instance of [`SortedString`] without performing sanity checks.
@@ -285,14 +346,13 @@ impl<'a> SortedString<'a> {
     /// ```
     /// use ascii::AsciiChar;
     /// use b4s::{SortedString, Span};
-    /// use b4s::SearchError::NotFound;
     ///
     /// let sep = AsciiChar::Comma;
     /// let unsorted_haystack = "a,c,b";
     /// let sorted_string = SortedString::new_unchecked(unsorted_haystack, sep);
     ///
     /// // Unable to find element in unsorted haystack
-    /// assert_eq!(sorted_string.binary_search("b"), Err(NotFound(Span(0, 1))));
+    /// assert_eq!(sorted_string.binary_search("b"), Err(Span(0, 1)));
     /// ```
     #[must_use]
     pub fn new_unchecked(string: &'a str, sep: AsciiChar) -> Self {
@@ -374,3 +434,11 @@ pub struct Span(
     /// End index of the substring.
     pub usize,
 );
+
+impl Error for Span {}
+
+impl Display for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}, {})", self.0, self.1)
+    }
+}
