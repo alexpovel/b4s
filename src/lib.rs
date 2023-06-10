@@ -191,7 +191,9 @@ impl<'a> SortedString<'a> {
     /// # Panics
     ///
     /// This method panics when slicing into the `haystack` fails. Occurrences of such
-    /// panics are bugs. Please report them.
+    /// panics are [logic
+    /// bugs](https://doc.rust-lang.org/book/ch09-03-to-panic-or-not-to-panic.html#cases-in-which-you-have-more-information-than-the-compiler).
+    /// Please report them.
     ///
     /// The panic allows the API to be simple. No panic implies converting the failure
     /// to some error value, like an `enum`. That `enum` would then have a variant such
@@ -236,10 +238,19 @@ impl<'a> SortedString<'a> {
     ///          }
     ///      }
     ///      ```
+    /// - *Single*-byte values with highest bit 1 are outside the ASCII range and
+    ///   **invalid UTF-8**:
     ///
-    /// ### Fuzzy Testing
+    ///   ```
+    ///   for byte in 0b1000_0000u8..=0b1111_1111u8 {
+    ///       assert!(!byte.is_ascii());
+    ///       assert!(std::str::from_utf8(&[byte]).is_err());
+    ///   }
+    ///   ```
     ///
-    /// To further strengthen confidence in panic-freedom, fuzzy testing was conducted
+    /// ### Fuzz Testing
+    ///
+    /// To further strengthen confidence in panic-freedom,  testing was conducted
     /// using [`afl`](https://crates.io/crates/afl). Run it yourself with `cargo install
     /// just && just fuzz`. The author let a fuzz test run for over 5 billion
     /// iterations, finding no panics:
@@ -274,10 +285,10 @@ impl<'a> SortedString<'a> {
     /// Note: at the time of writing,
     /// [`cargo-fuzz`](https://github.com/rust-fuzz/cargo-fuzz) and
     /// [`cargo-afl`](https://github.com/rust-fuzz/afl.rs) were available. The former
-    /// works with [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html), the latter
-    /// with [`afl`](https://github.com/google/AFL). **Both were already deprecated**
-    /// at the time of writing, but continue to work well. `afl` was chosen as it
-    /// didn't require a nightly toolchain.
+    /// works with [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html), the latter with
+    /// [`afl`](https://github.com/google/AFL). **Both were already deprecated** at the
+    /// time of writing, but continue to work well. `afl` was chosen as it didn't
+    /// require a nightly toolchain.
     pub fn binary_search<U>(&self, needle: U) -> SearchResult
     where
         U: AsRef<str>,
