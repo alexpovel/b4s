@@ -192,8 +192,9 @@ impl<'a> SortedString<'a> {
     ///
     /// This method panics when slicing into the `haystack` fails. Occurrences of such
     /// panics are [logic
-    /// bugs](https://doc.rust-lang.org/book/ch09-03-to-panic-or-not-to-panic.html#cases-in-which-you-have-more-information-than-the-compiler).
-    /// Please report them.
+    /// bugs](https://doc.rust-lang.org/book/ch09-03-to-panic-or-not-to-panic.html#cases-in-which-you-have-more-information-than-the-compiler)
+    /// and should never occur (see the below assumptions). Please report them if they
+    /// do.
     ///
     /// The panic allows the API to be simple. No panic implies converting the failure
     /// to some error value, like an `enum`. That `enum` would then have a variant such
@@ -250,10 +251,10 @@ impl<'a> SortedString<'a> {
     ///
     /// ### Fuzz Testing
     ///
-    /// To further strengthen confidence in panic-freedom,  testing was conducted
-    /// using [`afl`](https://crates.io/crates/afl). Run it yourself with `cargo install
-    /// just && just fuzz`. The author let a fuzz test run for over 5 billion
-    /// iterations, finding no panics:
+    /// To further strengthen confidence in panic-freedom,  testing was conducted using
+    /// [`afl`](https://crates.io/crates/afl). Run it yourself with `cargo install just
+    /// && just fuzz`. The author let a fuzz test run for over 5 billion iterations,
+    /// finding no panics:
     ///
     /// ```text
     ///      american fuzzy lop ++4.06c {default} (target/debug/afl-target) [fast]
