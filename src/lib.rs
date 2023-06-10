@@ -9,8 +9,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![allow(clippy::multiple_crate_versions)]
-//! Binary Search Single Sorted String: Perform binary search on a single, delimited
-//! string slice of sorted but unevenly sized substrings.
+#![doc = include_str!("../README.md")]
 
 #[doc(no_inline)] // https://users.rust-lang.org/t/re-exporting-type-and-rustdoc/50847
 pub use ascii::AsciiChar;
@@ -22,7 +21,7 @@ use std::{cmp::Ordering, error::Error, fmt::Display, ops::Range};
 /// This type upholds the important invariants of [`SortedString::binary_search()`]:
 ///
 /// - a *sorted* string is required,
-/// - as well as some [`char`] separator to split by.
+/// - as well as some [`AsciiChar`] separator to split by.
 ///
 /// Access to binary search is gated behind this type. For this to not be too painful,
 /// the type is designed to be cheap, as it doesn't own the potentially large haystack
@@ -380,7 +379,7 @@ impl<'a> SortedString<'a> {
     /// assert_eq!(sorted_string.binary_search("b"), Err(Range { start: 0, end: 1 }));
     /// ```
     #[must_use]
-    pub fn new_unchecked(string: &'a str, sep: AsciiChar) -> Self {
+    pub const fn new_unchecked(string: &'a str, sep: AsciiChar) -> Self {
         Self::new(string, sep)
     }
 
@@ -417,7 +416,7 @@ impl<'a> SortedString<'a> {
             .join(&sep.to_string())
     }
 
-    fn new(string: &'a str, sep: AsciiChar) -> Self {
+    const fn new(string: &'a str, sep: AsciiChar) -> Self {
         Self { string, sep }
     }
 
