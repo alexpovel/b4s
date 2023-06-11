@@ -46,12 +46,10 @@ use std::{cmp::Ordering, error::Error, fmt::Display, ops::Range};
 /// available, while arbitrary [`char`]s are not allowed:
 ///
 /// ```compile_fail
-/// use b4s::SortedString;
-///
 /// let sep = '🦀';
 /// let haystack = "a,b,c";
 /// // Not allowed:
-/// let _ = SortedString::new_checked(haystack, sep);
+/// let _ = b4s::SortedString::new_checked(haystack, sep);
 /// ```
 ///
 /// UTF-8 being a variable-length encoding, allowing *any* separator [`char`] would
@@ -111,12 +109,9 @@ impl<'a> SortedString<'a> {
     /// # Example
     ///
     /// ```
-    /// use ascii::AsciiChar;
-    /// use b4s::SortedString;
-    ///
-    /// let sep = AsciiChar::Comma;
+    /// let sep = b4s::AsciiChar::Comma;
     /// let haystack = "a,b,c";
-    /// let sorted_string = SortedString::new_checked(haystack, sep);
+    /// let sorted_string = b4s::SortedString::new_checked(haystack, sep);
     ///
     /// assert!(sorted_string.is_ok());
     /// ```
@@ -130,14 +125,23 @@ impl<'a> SortedString<'a> {
     /// Binary search requires prior sorting, so creation has to fail.
     ///
     /// ```
-    /// use ascii::AsciiChar;
-    /// use b4s::SortedString;
-    ///
-    /// let sep = AsciiChar::Comma;
+    /// let sep = b4s::AsciiChar::Comma;
     /// let unsorted_haystack = "a,c,b";
-    /// let sorted_string = SortedString::new_checked(unsorted_haystack, sep);
+    /// let sorted_string = b4s::SortedString::new_checked(unsorted_haystack, sep);
     ///
     /// assert_eq!(sorted_string, Err(b4s::SortedStringCreationError::NotSorted));
+    /// ```
+    ///
+    /// This error might also creep in when passing a newline-separated file containing
+    /// a trailing newline. The empty string will be in last position, contradicting
+    /// sorting.
+    ///
+    /// ```
+    /// let sep = b4s::AsciiChar::LineFeed;
+    /// let haystack = "Aachen\nAmpel\nAngel\nApfel\n";
+    /// let ss = b4s::SortedString::new_checked(haystack, sep);
+    ///
+    /// assert_eq!(ss, Err(b4s::SortedStringCreationError::NotSorted));
     /// ```
     ///
     /// ## Example: Creation Fails (Haystack Empty)
@@ -145,12 +149,9 @@ impl<'a> SortedString<'a> {
     /// Supplying an empty haystack [`str`] is likely an error and therefore fails.
     ///
     /// ```
-    /// use ascii::AsciiChar;
-    /// use b4s::SortedString;
-    ///
-    /// let sep = AsciiChar::Comma;
+    /// let sep = b4s::AsciiChar::Comma;
     /// let haystack = "";
-    /// let sorted_string = SortedString::new_checked(haystack, sep);
+    /// let sorted_string = b4s::SortedString::new_checked(haystack, sep);
     ///
     /// assert_eq!(sorted_string, Err(b4s::SortedStringCreationError::EmptyHaystack));
     /// ```
@@ -179,6 +180,49 @@ impl<'a> SortedString<'a> {
     /// [`usize`], as the haystack is variable-length. For the error case, see below.
     ///
     /// # Examples
+    ///
+    /// For common examples, see the [crate-level documentation](crate). The following
+    /// are more specific examples.
+    ///
+    /// ## Multi-byte needle and haystack
+    ///
+    /// The needle and haystack can be *any* UTF-8 string. However, note that the
+    /// returned [`Range`] is returned in raw byte positions, similar to
+    /// [`std::str::len`](https://doc.rust-lang.org/std/primitive.str.html#method.len):
+    ///
+    /// > This length is in bytes, not chars or graphemes. In other words, it might not
+    /// > be what a human considers the length of the string.
+    ///
+    /// ```
+    /// let sep = b4s::AsciiChar::VerticalBar;
+    /// let haystack = "Apfel|Bäume|Zäune|zäunen|Äpfel|Öfen|ƒoo|مرحبًا|你好|😂";
+    /// let ss = b4s::SortedString::new_checked(haystack, sep).unwrap();
+    ///
+    /// let needle = "Bäume";
+    /// let result = ss.binary_search(needle);
+    ///
+    /// assert_eq!(result, Ok(std::ops::Range { start: 6, end: 12 }));
+    /// ```
+    ///
+    /// ## Needle contains separator
+    ///
+    /// This situation not handled specially. Such needles will be impossible to find:
+    ///
+    /// ```
+    /// use std::ops::Range;
+    ///
+    /// let sep = b4s::AsciiChar::A;
+    /// let haystack = "Aachen\nAmpel\nAngel\nApfel\n";
+    /// let ss = b4s::SortedString::new_checked(haystack, sep).unwrap();
+    ///
+    /// let needle = "Angel";
+    /// let result = ss.binary_search(needle);
+    /// assert_eq!(result, Err(Range { start: 0, end: 0 }));
+    ///
+    /// let needle = "ngel\n";
+    /// let result = ss.binary_search(needle);
+    /// assert_eq!(result, Ok(Range { start: 14, end: 19 }));
+    /// ```
     ///
     /// # Errors
     ///
@@ -356,27 +400,20 @@ impl<'a> SortedString<'a> {
     /// # Example: Simple Use
     ///
     /// ```
-    /// use ascii::AsciiChar;
-    /// use b4s::SortedString;
-    ///
-    /// let sep = AsciiChar::Comma;
+    /// let sep = b4s::AsciiChar::Comma;
     /// let haystack = "a,b,c";
-    /// let sorted_string = SortedString::new_unchecked(haystack, sep);
+    /// let sorted_string = b4s::SortedString::new_unchecked(haystack, sep);
     /// ```
     ///
     /// # Example: Incorrect Use
     ///
     /// ```
-    /// use ascii::AsciiChar;
-    /// use b4s::{SortedString};
-    /// use std::ops::Range;
-    ///
-    /// let sep = AsciiChar::Comma;
+    /// let sep = b4s::AsciiChar::Comma;
     /// let unsorted_haystack = "a,c,b";
-    /// let sorted_string = SortedString::new_unchecked(unsorted_haystack, sep);
+    /// let sorted_string = b4s::SortedString::new_unchecked(unsorted_haystack, sep);
     ///
     /// // Unable to find element in unsorted haystack
-    /// assert_eq!(sorted_string.binary_search("b"), Err(Range { start: 0, end: 1 }));
+    /// assert_eq!(sorted_string.binary_search("b"), Err(std::ops::Range { start: 0, end: 1 }));
     /// ```
     #[must_use]
     pub const fn new_unchecked(string: &'a str, sep: AsciiChar) -> Self {
@@ -393,19 +430,15 @@ impl<'a> SortedString<'a> {
     /// # Example
     ///
     /// ```
-    /// use ascii::AsciiChar;
-    /// use b4s::{SortedString};
-    /// use std::ops::Range;
-    ///
-    /// let sep = AsciiChar::LineFeed;
+    /// let sep = b4s::AsciiChar::LineFeed;
     /// // Perhaps this was read directly from a file, where sorting is unreliable/unknown.
     /// let unsorted_haystack = "c\nb\na";
-    /// let sorted_haystack = SortedString::sort(unsorted_haystack, sep);
+    /// let sorted_haystack = b4s::SortedString::sort(unsorted_haystack, sep);
     ///
     /// // Passes fine
-    /// let sorted_string = SortedString::new_checked(&sorted_haystack, sep).unwrap();
+    /// let sorted_string = b4s::SortedString::new_checked(&sorted_haystack, sep).unwrap();
     ///
-    /// assert_eq!(sorted_string.binary_search("c"), Ok(Range { start: 4, end: 5 }));
+    /// assert_eq!(sorted_string.binary_search("c"), Ok(std::ops::Range { start: 4, end: 5 }));
     /// ```
     #[must_use]
     pub fn sort(string: &str, sep: AsciiChar) -> String {
