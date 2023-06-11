@@ -92,6 +92,33 @@ impl Display for SortedString<'_> {
     }
 }
 
+/// Error returned in case of a failed search.
+///
+/// [Thin wrapper](https://doc.rust-lang.org/rust-by-example/generics/new_types.html)
+/// for [`Range<usize>`], required to implement [`Error`], achieving a [useful
+/// API](https://rust-lang.github.io/api-guidelines/interoperability.html#error-types-are-meaningful-and-well-behaved-c-good-err).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SearchError(
+    /// Location of the last *unsuccessful* comparison.
+    ///
+    /// This is *not* the location where the needle could be inserted. That location is
+    /// either to the left *or* right of this location, depending on how
+    /// [comparison](https://doc.rust-lang.org/std/primitive.str.html#impl-PartialOrd%3Cstr%3E-for-str)
+    /// goes. As this error is not particularly actionable at runtime, the exact
+    /// location (left, right) is not reported, saving computation at runtime and
+    /// affording a simpler implementation.
+    pub Range<usize>,
+);
+
+impl Error for SearchError {}
+
+impl Display for SearchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let SearchError(range) = self;
+        write!(f, "needle not found, last looked at {range:?}")
+    }
+}
+
 /// The result of a [`SortedString::binary_search()`].
 ///
 ///
@@ -101,8 +128,8 @@ impl Display for SortedString<'_> {
 ///
 /// ## Error case
 ///
-/// The location of the last *unsuccessful* comparison.
-pub type SearchResult = Result<Range<usize>, Range<usize>>;
+/// Refer to [`SearchError`] for details.
+pub type SearchResult = Result<Range<usize>, SearchError>;
 
 impl<'a> SortedString<'a> {
     /// Creates a new instance of [`SortedString`], performing sanity checks.
@@ -223,7 +250,7 @@ impl<'a> SortedString<'a> {
     ///
     /// let needle = "Angel";
     /// let result = ss.binary_search(needle);
-    /// assert_eq!(result, Err(Range { start: 0, end: 0 }));
+    /// assert_eq!(result, Err(b4s::SearchError(Range { start: 0, end: 0 })));
     ///
     /// let needle = "ngel\n";
     /// let result = ss.binary_search(needle);
@@ -232,15 +259,7 @@ impl<'a> SortedString<'a> {
     ///
     /// # Errors
     ///
-    /// There is only a single error case: the needle is not found. In that case, the
-    /// location of the last *unsuccessful* comparison is returned.
-    ///
-    /// This is *not* the location where the needle could be inserted. That location is
-    /// either to the left *or* right of this location, depending on how
-    /// [comparison](https://doc.rust-lang.org/std/primitive.str.html#impl-PartialOrd%3Cstr%3E-for-str)
-    /// goes. As this error is not particularly actionable at runtime, the exact
-    /// location (left, right) is not reported, saving computation at runtime and
-    /// affording a simpler implementation.
+    /// Refer to [`SearchError`] for more info.
     ///
     /// # Panics
     ///
@@ -394,13 +413,13 @@ impl<'a> SortedString<'a> {
             }
         }
 
-        Err(Range { start, end })
+        Err(SearchError(Range { start, end }))
     }
 
     /// Creates an instance of [`SortedString`] without performing sanity checks.
     ///
     /// This is essentially what conventionally would be a simple
-    /// [`new()`](https://rust-lang.github.io/api-guidelines/naming.html#casing-conforms-to-rfc-430-c-case),
+    /// [`new()`](https://rust-lang.github.io/api-guidelines/interoperability.html#types-eagerly-implement-common-traits-c-common-traits),
     /// but specifically named to alert users to the dangers.
     ///
     /// # Example: Simple Use
@@ -414,12 +433,17 @@ impl<'a> SortedString<'a> {
     /// # Example: Incorrect Use
     ///
     /// ```
+    /// use std::ops::Range;
+    ///
     /// let sep = b4s::AsciiChar::Comma;
     /// let unsorted_haystack = "a,c,b";
     /// let sorted_string = b4s::SortedString::new_unchecked(unsorted_haystack, sep);
     ///
     /// // Unable to find element in unsorted haystack
-    /// assert_eq!(sorted_string.binary_search("b"), Err(std::ops::Range { start: 0, end: 1 }));
+    /// assert_eq!(
+    ///     sorted_string.binary_search("b"),
+    ///     Err(b4s::SearchError(Range { start: 0, end: 1 }))
+    /// );
     /// ```
     #[must_use]
     pub const fn new_unchecked(string: &'a str, sep: AsciiChar) -> Self {
@@ -444,7 +468,10 @@ impl<'a> SortedString<'a> {
     /// // Passes fine
     /// let sorted_string = b4s::SortedString::new_checked(&sorted_haystack, sep).unwrap();
     ///
-    /// assert_eq!(sorted_string.binary_search("c"), Ok(std::ops::Range { start: 4, end: 5 }));
+    /// assert_eq!(
+    ///     sorted_string.binary_search("c"),
+    ///     Ok(std::ops::Range { start: 4, end: 5 })
+    /// );
     /// ```
     #[must_use]
     pub fn sort(string: &str, sep: AsciiChar) -> String {
