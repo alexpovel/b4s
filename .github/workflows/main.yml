@@ -1,4 +1,4 @@
-name: Build, test and publish
+name: Main
 
 on:
   push:
@@ -8,6 +8,8 @@ env:
 
 jobs:
   build-test:
+    name: Build and test (${{ matrix.os }})
+
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
