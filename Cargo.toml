@@ -8,7 +8,7 @@ license-file = "LICENSE"
 repository = "https://github.com/alexpovel/b4s"
 readme = "README.md"
 documentation = "https://docs.rs/b4s"
-keywords = ["search", "binary search", "string", "str", "uneven"]
+keywords = ["search", "string", "str", "uneven"]
 categories = ["algorithms"]
 
 [dependencies]
