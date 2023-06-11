@@ -5,6 +5,8 @@
 Binary Search Single Sorted String: Perform binary search on a single, delimited string
 slice of sorted but unevenly sized substrings.
 
+View the [docs](https://docs.rs/b4s) for more information.
+
 ## Usage
 
 There are generally two ways to setup this crate: at compile-time, or at runtime. The
