@@ -7,8 +7,8 @@ slice of sorted but unevenly sized substrings.
 
 ## Usage
 
-There are generally two ways to use this crate: at compile-time, or at runtime. The main
-(only...) method of interest is [`SortedString::binary_search()`]. View its
+There are generally two ways to setup this crate: at compile-time, or at runtime. The
+main (only...) method of interest is [`SortedString::binary_search()`]. View its
 documentation for detailed context.
 
 ### Runtime
@@ -31,8 +31,8 @@ fn main() {
 
 ### Compile-time
 
-Only this function is `const fn`, and usable statically. As a tradeoff, it's potentially
-unsound.
+For convenience, there's also a `const fn`, usable statically. As a tradeoff, it's
+potentially unsound.
 
 ```rust
 use b4s::{AsciiChar, SortedString};
@@ -62,7 +62,7 @@ The itch to be scratched is the following:
 
 - there's an array of strings to do lookup in, for example a word list
 - the lookup is a simple containment check, with no modification
-- the word list is available and prepared (sorted) at compile-time (e.g. using
+- the word list is available and prepared (sorted) at compile-time (e.g. in
   [`build.rs`](https://doc.rust-lang.org/cargo/reference/build-scripts.html))
 - the word list is large (potentially much larger than the code itself)
 - the list is to be distributed as part of the binary
@@ -85,12 +85,16 @@ essentially zero-cost.
 
 Therefore, this crate is an attempt to provide a solution with:
 
-- good, not perfect runtime performance
-- with very little, compile-time preprocessing needed (just sorting)
+- good, not perfect runtime performance.
+- very little, compile-time preprocessing needed (just sorting).
 - essentially no additional startup cost (unlike, say, constructing a `HashSet` at
-  runtime)
-- binary sizes as small as possible
-- compile times as fast as possible
+  runtime).
+
+  The program this crate was initially designed for is sensitive to startup-time, as the
+  program's main processing is *rapid*. Even just 50ms of startup time would be very
+  noticeable, slowing down a program run by a factor of about 10.
+- binary sizes as small as possible.
+- compile times as fast as possible.
 
 It was found that the approaches using arrays and hash sets (via `phf`) absolutely
 tanked developer experience, with compile times north of 20 minutes (!) for 30 MB word
