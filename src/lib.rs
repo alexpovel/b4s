@@ -80,10 +80,16 @@ use std::{cmp::Ordering, error::Error, fmt::Display, ops::Range};
 /// The ASCII requirement is manifested in the [type
 /// system](https://dusted.codes/the-type-system-is-a-programmers-best-friend),
 /// enforcing correct usage [at compile time](https://cliffle.com/blog/rust-typestate/).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SortedString<'a> {
     string: &'a str,
     sep: AsciiChar,
+}
+
+impl Display for SortedString<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SortedString({:?}, {:?})", self.string, self.sep)
+    }
 }
 
 /// The result of a [`SortedString::binary_search()`].
@@ -462,7 +468,7 @@ impl<'a> SortedString<'a> {
 }
 
 /// Error that can occur when creating a [`SortedString`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SortedStringCreationError {
     /// The passed haystack was not sorted.
     NotSorted,
