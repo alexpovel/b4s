@@ -298,8 +298,9 @@ impl<'a> SortedString<'a> {
     /// - The haystack is `&str`, aka valid UTF-8. **Users cannot pass malformed
     ///   UTF-8.**
     /// - The separator is ASCII, as ensured by signatures working off [`AsciiChar`],
-    ///   providing type-level guarantees. **Users can only pass single-byte UTF-8
-    ///   values.**
+    ///   providing [type-level
+    ///   guarantees](https://rust-lang.github.io/api-guidelines/dependability.html#static-enforcement).
+    ///   **Users can only pass single-byte UTF-8 values.**
     /// - The separator being ASCII ([highest bit
     ///   0](https://en.wikipedia.org/wiki/ASCII#8-bit_codes)), it cannot be part of any
     ///   code point encoded as [multiple bytes using UTF-8 (highest bit
@@ -423,7 +424,8 @@ impl<'a> SortedString<'a> {
         Err(SearchError(Range { start, end }))
     }
 
-    /// Creates an instance of [`SortedString`] without performing sanity checks.
+    /// Creates an instance of [`SortedString`] [without performing sanity
+    /// checks](https://rust-lang.github.io/api-guidelines/dependability.html#dynamic-enforcement-with-opt-out).
     ///
     /// This is essentially what conventionally would be a simple
     /// [`new()`](https://rust-lang.github.io/api-guidelines/interoperability.html#types-eagerly-implement-common-traits-c-common-traits),
