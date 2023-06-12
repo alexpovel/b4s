@@ -58,6 +58,10 @@ static SS: SortedString =
     SortedString::new_unchecked(include_str!("path/to/file"), AsciiChar::LineFeed);
 ```
 
+This is convenient if a delimited (`\n`, ...) file is already at hand. It only needs to
+be sorted once previously, and is then available for string containment checks at good,
+albeit not perfect, runtime performance, at essentially no startup cost.
+
 ## Motivation
 
 The itch to be scratched is the following:
