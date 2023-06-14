@@ -1,7 +1,7 @@
 [package]
 name = "b4s"
 version = "0.3.0"
-edition = "2021"
+edition.workspace = true
 rust-version = "1.64.0"
 authors = ["Alex Povel <rust@alexpovel.de>"]
 description = "Binary Search Single Sorted String: Perform binary search on a single, delimited string slice of sorted but unevenly sized substrings."
@@ -12,6 +12,9 @@ documentation = "https://docs.rs/b4s"
 keywords = ["search", "string", "str", "uneven"]
 categories = ["algorithms"]
 
+[workspace.package]
+edition = "2021"
+
 [dependencies]
 ascii = "1.1.0"
 itertools = "0.10.5"
@@ -20,3 +23,7 @@ itertools = "0.10.5"
 criterion = { version = "0.5.1", features = ["html_reports"] }
 phf = { version = "0.11.1", features = ["macros"] }
 rstest = "0.17.0"
+
+[workspace]
+
+members = ["fuzz"]

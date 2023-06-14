@@ -14,12 +14,12 @@ onboard:
 # Runs fuzz testing.
 [unix]
 fuzz: install-afl
-    cd {{ justfile_directory() / 'fuzz' }} && cargo afl build
+    cd {{ justfile_directory() }} && cargo afl build --package afl-target
 
     # Kill any running fuzzers, they like to get stuck.
-    kill -9 $(lsof -t {{ justfile_directory() / 'fuzz' / 'out' }}/*) || true
+    cd {{ justfile_directory() }} && kill -9 $(lsof -t 'fuzz/out'/*) || true
 
-    cd {{ justfile_directory() / 'fuzz' }} && cargo afl fuzz -i in -o out target/debug/afl-target
+    cd {{ justfile_directory() }} && cargo afl fuzz -i fuzz/in -o fuzz/out target/debug/afl-target
 
 # Provisions AFL (https://rust-fuzz.github.io/book/afl/setup.html#tools).
 [unix]

@@ -1,7 +1,7 @@
 use afl::fuzz;
 use arbitrary::{Arbitrary, Unstructured};
 use b4s::AsciiChar;
-use std::{fmt::Display, fs::OpenOptions};
+use std::{fmt::Display, fs::OpenOptions, io::Write};
 
 /// Input signature for fuzzing.
 ///
@@ -49,13 +49,20 @@ fn unstructured_to_ascii_char(u: &mut Unstructured) -> arbitrary::Result<AsciiCh
 }
 
 fn main() {
-    let filename = "fuzz-inputs.txt";
+    let mut data_file = None;
 
-    let mut _data_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(filename)
-        .expect("Cannot input data file.");
+    // Toggle to write out input data to file
+    if false {
+        let filename = "fuzz-inputs.txt";
+
+        data_file = Some(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(filename)
+                .expect("Cannot input data file."),
+        );
+    }
 
     fuzz!(|data: Input| {
         // Chances of us passing `new_checked` are exceedingly slim, so go unchecked.
@@ -65,10 +72,10 @@ fn main() {
         let _ = ss.binary_search(&data.needle);
 
         // It's not easy to get insight into the input data unless a panic occurred, so
-        // write it out. This costs c. 20% in throughput performance. Comment out once
-        // you're convinced results are good.
-        // _data_file
-        //     .write_all(format!("{data}\n").as_bytes())
-        //     .expect("Cannot write to data file.");
+        // write it out. This costs some performance.
+        if let Some(file) = data_file.as_mut() {
+            file.write_all(format!("{data}\n").as_bytes())
+                .expect("Cannot write to data file.");
+        }
     });
 }
