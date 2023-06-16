@@ -525,3 +525,20 @@ impl Display for SortedStringCreationError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+    use std::error::Error;
+
+    /// Pretty useless test; just have it so removing `Error` is flagged and would be
+    /// noticed.
+    #[rstest]
+    #[case(Box::new(SortedStringCreationError::NotSorted))]
+    #[case(Box::new(SortedStringCreationError::EmptyHaystack))]
+    #[case(Box::new(SearchError(Range { start: 0, end: 1 })))]
+    fn test_error_trait_implementations_are_present(#[case] err: Box<dyn Error>) {
+        assert!(!err.to_string().is_empty());
+    }
+}
