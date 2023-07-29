@@ -7,9 +7,15 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 set ignore-comments := true
 
 # Runs onboarding steps, installing dependencies and setting up the environment.
-onboard:
-    pip install pre-commit && pre-commit install --hook-type pre-push --hook-type pre-commit --hook-type commit-msg
+onboard: install-pre-commit install-afl
+    pre-commit install --hook-type pre-push --hook-type pre-commit --hook-type commit-msg
     cargo install cargo-tarpaulin
+
+# Installs pre-commit, the program.
+[unix]
+install-pre-commit:
+    # From Debian 12, `pip install` globally is an error ("This environment is externally managed.")
+    command -v pre-commit > /dev/null || { pip install pre-commit || sudo apt-get update && sudo apt-get install --yes pre-commit; }
 
 # Runs fuzz testing.
 [unix]
