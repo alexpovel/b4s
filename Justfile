@@ -17,6 +17,11 @@ install-pre-commit:
     # From Debian 12, `pip install` globally is an error ("This environment is externally managed.")
     command -v pre-commit > /dev/null || { pip install pre-commit || sudo apt-get update && sudo apt-get install --yes pre-commit; }
 
+# Runs benchmarks.
+[unix]
+bench: install-gnuplot
+    cd {{ justfile_directory() }} && cargo bench
+
 # Runs fuzz testing.
 [unix]
 fuzz: install-afl
@@ -34,3 +39,8 @@ install-afl:
     command -v make > /dev/null || { sudo apt-get update && sudo apt-get install --yes make; }
     command -v lsof > /dev/null || { sudo apt-get update && sudo apt-get install --yes lsof; }
     command -v cargo-afl > /dev/null || { cargo install afl; }
+
+# Install gnuplot.
+[unix]
+install-gnuplot:
+    command -v gnuplot > /dev/null || { sudo apt-get update && sudo apt-get install --yes gnuplot; }

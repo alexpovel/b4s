@@ -27,3 +27,7 @@ rstest = "0.17.0"
 [workspace]
 
 members = ["fuzz"]
+
+[[bench]]
+name = "main"
+harness = false
