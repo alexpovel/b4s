@@ -109,9 +109,9 @@ imploding, taking the IDE with it. This crate was born as a solution. Its main d
 is **suboptimal runtime performance**. If that is your primary goal, opt for `phf` or
 similar crates.
 
-### Alternative approaches
+## Alternative approaches
 
-#### Array
+### Array
 
 A simple array is an obvious choice, and can be generated in a build script.
 
@@ -139,7 +139,7 @@ There are two large pains in this approach:
    length](https://doc.rust-lang.org/book/ch15-00-smart-pointers.html). For large word
    lists, this leads to incredible bloat for the resulting binary.
 
-#### Hash Set
+### Hash Set
 
 Regular [`HashSet`s](https://doc.rust-lang.org/std/collections/struct.HashSet.html) are
 not available at compile time. Crates like [`phf`](https://github.com/rust-phf/rust-phf)
@@ -168,7 +168,7 @@ Similar downsides as for the array case apply: very long compile times, and cons
 binary bloat from smart pointers. A hash set ultimately is an array with computed
 indices, so this is expected.
 
-#### Single, sorted and padded string
+### Single, sorted and padded string
 
 Another approach could be to use a single string (saving pointer bloat), but pad all
 words to the longest occurring length, facilitating easy binary search (and increasing
@@ -183,7 +183,7 @@ static WORDS: &str = "abc␣␣def␣␣ghi␣␣jklmn";
 The binary search implementation is then straightforward, as the elements are of known,
 fixed lengths (in this case, 5). This approach was found to not perform well.
 
-#### Higher-order data structures
+### Higher-order data structures
 
 In certain scenarios, one might reach for more sophisticated approaches, such as
 [tries](https://en.wikipedia.org/wiki/Trie). This is not a case this crate is designed
@@ -195,3 +195,32 @@ for. A trie would have to be either:
 While tools like [bincode](https://docs.rs/bincode/latest/bincode/) are fantastic, the
 latter approach is still numbingly slow at application startup, compared to the (much
 more ham-fisted) approach the crate at hand takes.
+
+## Benchmarks
+
+The below benchmarks show a performance comparison. The benchmarks run a search for
+representative words (start, middle, end, shortest and longest words found in the
+pre-sorted input list), on various different input word list lengths.
+
+Sets are unsurprisingly fastest, but naive binary search (the built-in one) seems
+incredibly optimized and just as fast. `b4s` is slower by a factor of 5 to 10. The
+"padded string" variant is slowest. One can observe how, as the input lists get longer
+("within *X* entries"), `b4s` becomes slower.
+
+In the context of this crate's purpose, the slowness might not be an issue: if
+application startup is measured in milliseconds, and lookups in nanoseconds (!), one can
+perform in the rough ballpark of, say, 100,000 lookups before the tradeoff of this crate
+(fast startup) becomes a problem (this crate would be terrible for a web server).
+
+... image goes here ...
+
+The benchmarks were run on a machine with the following specs:
+
+- AMD Ryzen 7 5800X3D
+- Debian 12 inside WSL 2 on Windows 10 21H2
+- Rust 1.71.0
+- [Criterion](https://github.com/bheisler/criterion.rs) 0.5.1
+
+The benchmarks are not terribly scientific (low sample sizes etc.), but serve as a rough
+guideline and sanity check. Run them yourself from the repository root with `cargo
+install just && just bench`.

@@ -60,7 +60,10 @@ use std::{cmp::Ordering, error::Error, fmt::Display, ops::Range};
 /// - or before each search.
 ///
 /// The former takes up a lot of space ([`usize`] pointers, which on 64-bit are much
-/// larger than the separator itself), the latter time. Both are undesirable.
+/// larger than the separator itself), the latter time. Both are undesirable. Even more
+/// undesirable would be handling UTF-8 parsing and validation manually. The ASCII
+/// requirement [keeps things simple](https://en.wikipedia.org/wiki/KISS_principle) and
+/// is unlikely to be an impediment in real-world use.
 ///
 /// As UTF-8 is fully ASCII-compatible, allowing only that means the string can be
 /// efficiently scanned as bytes. The needle and haystack can still be any UTF-8 string.

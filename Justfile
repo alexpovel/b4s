@@ -19,8 +19,9 @@ install-pre-commit:
 
 # Runs benchmarks.
 [unix]
-bench: install-gnuplot
+bench: install-gnuplot install-image-magick
     cd {{ justfile_directory() }} && cargo bench
+    convert {{ justfile_directory() }}/target/criterion/lookup/report/violin.svg assets/benchmark.png
 
 # Runs fuzz testing.
 [unix]
@@ -44,3 +45,8 @@ install-afl:
 [unix]
 install-gnuplot:
     command -v gnuplot > /dev/null || { sudo apt-get update && sudo apt-get install --yes gnuplot; }
+
+# Install ImageMagick.
+[unix]
+install-image-magick:
+    command -v convert > /dev/null || { sudo apt-get update && sudo apt-get install --yes imagemagick; }
