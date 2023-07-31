@@ -7,6 +7,8 @@ slice of sorted but unevenly sized substrings.
 
 View the [docs](https://docs.rs/b4s) for more information.
 
+[![codecov](https://codecov.io/github/alexpovel/b4s/branch/main/graph/badge.svg?token=jCISYOujgB)](https://codecov.io/github/alexpovel/b4s)![[crates](https://crates.io/crates/b4s)](https://img.shields.io/crates/v/b4s.svg)
+
 ## Usage
 
 There are generally two ways to setup this crate: at compile-time, or at runtime. The
