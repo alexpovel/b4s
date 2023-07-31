@@ -212,7 +212,7 @@ application startup is measured in milliseconds, and lookups in nanoseconds (!),
 perform in the rough ballpark of, say, 100,000 lookups before the tradeoff of this crate
 (fast startup) becomes a problem (this crate would be terrible for a web server).
 
-... image goes here ...
+![benchmark results violin plot](https://raw.githubusercontent.com/alexpovel/b4s/main/assets/benchmark.png)
 
 The benchmarks were run on a machine with the following specs:
 
