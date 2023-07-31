@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.1](https://github.com/alexpovel/b4s/compare/v0.3.0...v0.3.1) (2023-07-31)
+
+
+### Bug Fixes
+
+* **ci:** Exclude code coverage for benchmark code ([4d15509](https://github.com/alexpovel/b4s/commit/4d155097d9e5550ba8b2435c2574ac63ac48561f))
+* **ci:** Speed up tarpaulin install, don't compile ([dcf239c](https://github.com/alexpovel/b4s/commit/dcf239cc6b9972c6ccfe3304c3b66e199a856497))
+* **ci:** Update all dependencies ([e2da2d2](https://github.com/alexpovel/b4s/commit/e2da2d2503c8a04a023ec94dd91e240ccf63b449))
+* Onboarding with global `pip install` ([146f1a2](https://github.com/alexpovel/b4s/commit/146f1a2ccd1d26c6024054ed98023059b31d6ddc))
+
 ## [0.3.0](https://github.com/alexpovel/b4s/compare/v0.2.0...v0.3.0) (2023-06-11)
 
 
