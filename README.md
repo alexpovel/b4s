@@ -182,3 +182,16 @@ static WORDS: &str = "abc␣␣def␣␣ghi␣␣jklmn";
 
 The binary search implementation is then straightforward, as the elements are of known,
 fixed lengths (in this case, 5). This approach was found to not perform well.
+
+#### Higher-order data structures
+
+In certain scenarios, one might reach for more sophisticated approaches, such as
+[tries](https://en.wikipedia.org/wiki/Trie). This is not a case this crate is designed
+for. A trie would have to be either:
+
+- [built at runtime](https://docs.rs/trie-rs/0.1.1/trie_rs/index.html#usage-overview), or
+- [deserialized from a pre-built structure](https://serde.rs/).
+
+While tools like [bincode](https://docs.rs/bincode/latest/bincode/) are fantastic, the
+latter approach is still numbingly slow at application startup, compared to the (much
+more ham-fisted) approach the crate at hand takes.
