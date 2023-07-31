@@ -31,11 +31,17 @@ jobs:
           cargo test
           --verbose
 
+      - name: Install cargo-tarpaulin (for coverage)
+        # As recommened by `cargo-binstall` team:
+        # https://github.com/cargo-bins/cargo-binstall/tree/d5549ce99ebc82b1ceee93a41375137b7dbd1a1f#faq
+        uses: taiki-e/install-action@v2
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          tool: cargo-tarpaulin
       - name: Run tests (with coverage)
         if: matrix.os == 'ubuntu-latest'
         run: >
           rustup toolchain install --profile minimal nightly
-          && cargo install cargo-tarpaulin
           && cargo tarpaulin
           --verbose
           --out Xml
