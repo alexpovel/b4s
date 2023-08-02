@@ -255,10 +255,10 @@ picture.
 
 The benchmarks were run on a machine with the following specs:
 
-- AMD Ryzen 7 5800X3D
+- AMD Ryzen 7 5800X3D; DDR4 @ 3600MHz; NVMe SSD
 - Debian 12 inside WSL 2 on Windows 10 21H2
-- Rust 1.71.0
-- [Criterion](https://github.com/bheisler/criterion.rs) 0.5.1
+- libraries with versions as of commit 9e2f11c39342f1ea3460dda810a92b225ee9d4b8 (refer
+  to its `Cargo.toml`)
 
 The benchmarks are not terribly scientific (low sample sizes etc.), but serve as a rough
 guideline and sanity check. Run them yourself from the repository root with `cargo
