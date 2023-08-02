@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/alexpovel/b4s/compare/v0.3.1...v0.3.2) (2023-08-02)
+
+
+### Bug Fixes
+
+* **docs:** Add linear search to benchmarks and docs ([9e2f11c](https://github.com/alexpovel/b4s/commit/9e2f11c39342f1ea3460dda810a92b225ee9d4b8)), closes [#10](https://github.com/alexpovel/b4s/issues/10)
+
 ## [0.3.1](https://github.com/alexpovel/b4s/compare/v0.3.0...v0.3.1) (2023-07-31)
 
 
