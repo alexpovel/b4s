@@ -80,7 +80,7 @@ where
 pub fn criterion_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("lookup");
 
-    let short_run = true;
+    let short_run = false;
     if short_run {
         group.sample_size(10); // Default is 100
         group.warm_up_time(std::time::Duration::from_secs(1)); // Default is 3s
@@ -93,10 +93,6 @@ pub fn criterion_bench(c: &mut Criterion) {
         400_000, 500_000,
     ] {
         let words = compress_list(words.clone(), *length);
-
-        // Write out the compressed list to a file, so we can use it in the tests.
-        let wordss = words.join("\n");
-        std::fs::write(format!("de-short-{}.txt", length), wordss).unwrap();
 
         let words_set = generate_hashset(words.clone());
 
@@ -155,12 +151,18 @@ pub fn criterion_bench(c: &mut Criterion) {
                 |b, i| {
                     b.iter(|| {
                         binary_search_padded(
-                            i,
+                            black_box(i),
                             &words_single_padded_string_without_delimiter,
                             longest_word_length,
                         )
                     })
                 },
+            );
+
+            group.bench_with_input(
+                BenchmarkId::new("linear", &parameter_string),
+                repr_word,
+                |b, i| b.iter(|| words.contains(black_box(i))),
             );
 
             // `phf` not benchmarked as it's expected to be identical to stdlib's
@@ -175,6 +177,7 @@ pub fn criterion_bench(c: &mut Criterion) {
                     &words_single_padded_string_without_delimiter,
                     longest_word_length,
                 ),
+                words.contains(repr_word),
             ];
 
             assert!(

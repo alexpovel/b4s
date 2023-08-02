@@ -72,50 +72,46 @@ The itch to be scratched is the following:
 - the lookup is a simple containment check, with no modification
 - the word list is available and prepared (sorted) at compile-time (e.g. in
   [`build.rs`](https://doc.rust-lang.org/cargo/reference/build-scripts.html))
-- the word list is large (potentially much larger than the code itself)
+- the word list is large (potentially much larger than the code itself); think 5MB or
+  more
 - the list is to be distributed as part of the binary
 
 A couple possible approaches come to mind. The summary table, where `n` is the number of
-words, is:
+words, is (for more context, see the individual sections below):
 
-| Approach      | Pre-compile preprocessing  | Compile time       | Runtime lookup          | Binary size |
-| ------------- | -------------------------- | ------------------ | ----------------------- | ----------- |
-| `b4s`         | Sort, `O(n log n)`         | Single ref: `O(1)` | Bin. search: `O(log n)` | `O(n)`      |
-| `array`       | Sort, `O(n log n)`         | Many refs: `O(n)`  | Bin. search: `O(log n)` | `~ O(3n)`   |
-| `phf`         | None                       | Many refs: `O(n)`  | Hash: `O(1)`            | `~ O(3n)`   |
-| padded `&str` | Sort + Pad, `~ O(n log n)` | Single ref: `O(1)` | Bin. search: `O(log n)` | `~ O(n)`    |
+| Approach                                                                                                                 | Pre-compile preprocessing[^1] | Compile time       | Runtime lookup                                                                                     | Binary size |
+| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | ------------------ | -------------------------------------------------------------------------------------------------- | ----------- |
+| `b4s`                                                                                                                    | Sort, `O(n log n)`            | Single ref: `O(1)` | Bin. search: `O(log n)`                                                                            | `O(n)`      |
+| `array`                                                                                                                  | Sort, `O(n log n)`            | Many refs: `O(n)`  | [Bin. search](https://doc.rust-lang.org/std/primitive.slice.html#method.binary_search): `O(log n)` | `~ O(3n)`   |
+| [`phf`](https://github.com/rust-phf/rust-phf)/[`HashSet`](https://doc.rust-lang.org/std/collections/struct.HashSet.html) | None                          | Many refs: `O(n)`  | Hash: `O(1)`                                                                                       | `~ O(3n)`   |
+| padded `&str`                                                                                                            | Sort + Pad, `~ O(n log n)`    | Single ref: `O(1)` | Bin. search: `O(log n)`                                                                            | `~ O(n)`    |
 
-For more context, see the individual sections below.
+This crate is an attempt to provide a solution with:
 
-Note that the pre-compile preprocessing is ordinarily performed only **a single time**,
-unless the word list itself changes. This column might therefore be moot, and considered
-essentially zero-cost.
+1. **good, not perfect runtime performance**,
+2. very little, [one-time](https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed) compile-time preprocessing needed (just sorting),
+3. **essentially no additional startup cost** (unlike, say, constructing a `HashSet` at
+  runtime)[^2],
+4. **binary sizes as small as possible**,
+5. **compile times as fast as possible**.
 
-Therefore, this crate is an attempt to provide a solution with:
-
-- good, not perfect runtime performance.
-- very little, compile-time preprocessing needed (just sorting).
-- essentially no additional startup cost (unlike, say, constructing a `HashSet` at
-  runtime).
-
-  The program this crate was initially designed for is sensitive to startup-time, as the
-  program's main processing is *rapid*. Even just 50ms of startup time would be very
-  noticeable, slowing down a program run by a factor of about 10.
-- binary sizes as small as possible.
-- compile times as fast as possible.
-
-It was found that the approaches using arrays and hash sets (via `phf`) absolutely
-tanked developer experience, with compile times north of 20 minutes (!) for 30 MB word
-lists, large binaries, and [`clippy`](https://github.com/rust-lang/rust-clippy)
-imploding, taking the IDE with it. This crate was born as a solution. Its main downside
-is **suboptimal runtime performance**. If that is your primary goal, opt for `phf` or
-similar crates.
+It was found that approaches using slices and hash sets (via `phf`) absolutely tanked
+developer experience, with compile times north of 20 minutes (!) for 30 MB word lists
+(even on [fast hardware](#note)), large binaries, and
+[`clippy`](https://github.com/rust-lang/rust-clippy) imploding, taking the IDE with it.
+This crate was born as a solution. Its main downside is **suboptimal runtime
+performance**. If that is your primary goal, opt for `phf` or similar crates. This crate
+is not suitable for long-running applications, where initial e.g. `HashSet` creation is
+a fraction of overall runtime costs.
 
 ## Alternative approaches
 
-### Array
+The following alternatives might be considered, but were found unsuitable for one reason
+or another.
 
-A simple array is an obvious choice, and can be generated in a build script.
+### Slices
+
+A simple slice is an obvious choice, and can be generated in a build script.
 
 ```rust
 static WORDS: &[&str] = &["abc", "def", "ghi", "jkl"];
@@ -166,9 +162,9 @@ fn main() {
 }
 ```
 
-Similar downsides as for the array case apply: very long compile times, and considerable
-binary bloat from smart pointers. A hash set ultimately is an array with computed
-indices, so this is expected.
+Similar downsides as for the slices case apply: very long compile times, and
+considerable binary bloat from smart pointers. A hash set ultimately is a slice with
+computed indices, so this is expected.
 
 ### Single, sorted and padded string
 
@@ -183,20 +179,52 @@ static WORDS: &str = "abc␣␣def␣␣ghi␣␣jklmn";
 ```
 
 The binary search implementation is then straightforward, as the elements are of known,
-fixed lengths (in this case, 5). This approach was found to not perform well.
+fixed lengths (in this case, 5). This approach was [found to not perform
+well](#benchmarks).
 
 ### Higher-order data structures
 
 In certain scenarios, one might reach for more sophisticated approaches, such as
 [tries](https://en.wikipedia.org/wiki/Trie). This is not a case this crate is designed
-for. A trie would have to be either:
+for. Such a structure would have to be either:
 
-- [built at runtime](https://docs.rs/trie-rs/0.1.1/trie_rs/index.html#usage-overview), or
+- [built at runtime](https://docs.rs/trie-rs/0.1.1/trie_rs/index.html#usage-overview),
+  for example as
+
+  ```rust
+  use trie_rs::TrieBuilder;
+
+  let mut builder = TrieBuilder::new();
+  builder.push("abc");
+  builder.push("def");
+  builder.push("ghi");
+  builder.push("jkl");
+  let trie = builder.build(); // Takes time
+
+  assert!(trie.exact_match("def"));
+  ```
+
+  or alternatively
 - [deserialized from a pre-built structure](https://serde.rs/).
 
 While tools like [bincode](https://docs.rs/bincode/latest/bincode/) are fantastic, the
 latter approach is still numbingly slow at application startup, compared to the (much
 more ham-fisted) approach the crate at hand takes.
+
+### Linear search
+
+This is only included here and in the benchmarks as a sanity check and baseline. Linear
+search like
+
+```rust
+static WORDS: &[&str] = &["abc", "def", "ghi", "jkl"];
+assert!(WORDS.contains(&"ghi"));
+```
+
+is $O(n)$, and [slower by a couple orders of magnitude for large
+lists](#linear-search-performance). If your current implementation relies on linear
+search, this create might offer an almost drop-in replacement with a significant
+performance improvement.
 
 ## Benchmarks
 
@@ -216,6 +244,15 @@ perform in the rough ballpark of, say, 100,000 lookups before the tradeoff of th
 
 ![benchmark results violin plot](https://raw.githubusercontent.com/alexpovel/b4s/main/assets/benchmark.png)
 
+### Linear search performance
+
+The [benchmark plot](./assets/benchmarks-with-linear-search.png) including [linear
+search](#linear-search) is largely illegible, as the linear horizontal axis scaling
+dwarfs all other search methods. It is therefore linked separately, but paints a clear
+picture.
+
+### Note
+
 The benchmarks were run on a machine with the following specs:
 
 - AMD Ryzen 7 5800X3D
@@ -226,3 +263,11 @@ The benchmarks were run on a machine with the following specs:
 The benchmarks are not terribly scientific (low sample sizes etc.), but serve as a rough
 guideline and sanity check. Run them yourself from the repository root with `cargo
 install just && just bench`.
+
+[^1]: Note that pre-compile preprocessing is ordinarily performed only **a single
+time**, unless the word list itself changes. This column might therefore be moot, and
+considered essentially zero-cost. This viewpoint benefits this crate.
+[^2]: The [program this crate was initially designed
+for](https://github.com/alexpovel/betterletters) is sensitive to startup-time, as the
+program's main processing is *rapid*. Even just 50ms of startup time would be very
+noticeable, slowing down a program run by a factor of about 10.

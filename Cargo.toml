@@ -23,6 +23,7 @@ itertools = "0.11.0"
 criterion = { version = "0.5.1", features = ["html_reports"] }
 phf = { version = "0.11.1", features = ["macros"] }
 rstest = "0.17.0"
+trie-rs = "0.1.1"
 
 [workspace]
 
