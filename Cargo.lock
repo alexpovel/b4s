@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "afl-target"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "afl",
  "arbitrary",
@@ -113,7 +113,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "b4s"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "ascii",
  "criterion",
