@@ -109,7 +109,9 @@ a fraction of overall runtime costs.
 ## Alternative approaches
 
 The following alternatives might be considered, but were found unsuitable for one reason
-or another.
+or another. See [this
+thread](https://users.rust-lang.org/t/fast-string-lookup-in-a-single-str-containing-millions-of-unevenly-sized-substrings/98040)
+for more discussion.
 
 ### Slices
 
