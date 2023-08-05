@@ -11,6 +11,16 @@ readme = "README.md"
 documentation = "https://docs.rs/b4s"
 keywords = ["search", "string", "str", "uneven"]
 categories = ["algorithms"]
+include = [
+    "README.md",
+    "LICENSE",
+    "Cargo.toml",
+    "Cargo.lock",
+    "src",
+    # Only include this so the crate compiles; benchmarks won't be runnable because
+    # required test data isn't included.
+    "benches/main.rs",
+]
 
 [workspace.package]
 edition = "2021"
