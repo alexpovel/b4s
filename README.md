@@ -5,7 +5,7 @@
 Binary Search Single Sorted String: Perform binary search on a single, delimited string
 slice of sorted but unevenly sized substrings.
 
-View the [docs](https://docs.rs/b4s) for more information.
+The docs are best viewed via [docs.rs](https://docs.rs/b4s).
 
 [![codecov](https://codecov.io/github/alexpovel/b4s/branch/main/graph/badge.svg?token=jCISYOujgB)](https://codecov.io/github/alexpovel/b4s)[![crates](https://img.shields.io/crates/v/b4s.svg)](https://crates.io/crates/b4s)
 
@@ -271,3 +271,8 @@ considered essentially zero-cost. This viewpoint benefits this crate.
 for](https://github.com/alexpovel/betterletters) is sensitive to startup-time, as the
 program's main processing is *rapid*. Even just 50ms of startup time would be very
 noticeable, slowing down a program run by a factor of about 10.
+
+## Note on name
+
+The 3-letter name is neat. Should you have a more meaningful, larger project that could
+make better use of it, let me know. I might move this crate to a different name.
