@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/alexpovel/b4s/compare/v0.3.2...v0.3.3) (2023-08-05)
+
+
+### Bug Fixes
+
+* **build:** Only `include` necessary files ([3bcdc0f](https://github.com/alexpovel/b4s/commit/3bcdc0f0d34823b674c0d391cdf89ac14f2166b4)), closes [#13](https://github.com/alexpovel/b4s/issues/13)
+
 ## [0.3.2](https://github.com/alexpovel/b4s/compare/v0.3.1...v0.3.2) (2023-08-02)
 
 
