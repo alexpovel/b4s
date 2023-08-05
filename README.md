@@ -35,8 +35,10 @@ fn main() {
 
 ### Compile-time
 
-For convenience, there's also a `const fn`, usable statically. As a tradeoff, it's
-potentially unsound.
+For convenience, there's also a `const fn`, usable statically. As a tradeoff, instance
+creation will not perform correctness checks. An unsorted string will result in binary
+search misbehaving. Though no panics occur, you will be handed back an `Error`. See the
+documentation of [`SortedString::new_unchecked()`] for details.
 
 ```rust
 use b4s::{AsciiChar, SortedString};
