@@ -31,6 +31,7 @@ itertools = "0.11.0"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["html_reports"] }
+fst = "0.4.7"
 phf = { version = "0.11.1", features = ["macros"] }
 rstest = "0.18.1"
 trie-rs = "0.1.1"

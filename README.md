@@ -79,21 +79,24 @@ The itch to be scratched is the following:
 - the list is to be distributed as part of the binary
 
 A couple possible approaches come to mind. The summary table, where `n` is the number of
-words, is (for more context, see the individual sections below):
+words in the dictionary and `k` the number of characters in a word to look up, is (for
+more context, see the individual sections below):
 
-| Approach                                                                                                                 | Pre-compile preprocessing[^1] | Compile time       | Runtime lookup                                                                                     | Binary size |
-| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------- | ------------------ | -------------------------------------------------------------------------------------------------- | ----------- |
-| `b4s`                                                                                                                    | Sort, `O(n log n)`            | Single ref: `O(1)` | Bin. search: `O(log n)`                                                                            | `O(n)`      |
-| `array`                                                                                                                  | Sort, `O(n log n)`            | Many refs: `O(n)`  | [Bin. search](https://doc.rust-lang.org/std/primitive.slice.html#method.binary_search): `O(log n)` | `~ O(3n)`   |
-| [`phf`](https://github.com/rust-phf/rust-phf)/[`HashSet`](https://doc.rust-lang.org/std/collections/struct.HashSet.html) | None                          | Many refs: `O(n)`  | Hash: `O(1)`                                                                                       | `~ O(3n)`   |
-| padded `&str`                                                                                                            | Sort + Pad, `~ O(n log n)`    | Single ref: `O(1)` | Bin. search: `O(log n)`                                                                            | `~ O(n)`    |
+| Approach             | Pre-compile preprocessing[^1] | Compile time prepr. | Runtime lookup                | Binary size              |
+| -------------------- | ----------------------------- | ------------------- | ----------------------------- | ------------------------ |
+| `b4s`                | [`O(n log n)`][slice-sort]    | Single ref: `O(1)`  | [`O(log n)`][b4s-lib]         | `O(n)`                   |
+| [`fst`][fst-repo]    | [`O(n log n)`][fst-build][^2] | Single ref: `O(1)`  | [`O(k)`][fst-lookup]          | [`< O(n)`][fst-size][^3] |
+| [slice][slice]       | [`O(n log n)`][slice-sort]    | Many refs: `O(n)`   | [`O(log n)`][slice-binsearch] | `~ O(3n)`                |
+| [`phf`][phf-repo]    | None                          | Many refs: `O(n)`   | Hash: `O(1)`                  | `~ O(3n)`                |
+| [`HashSet`][hashset] | None                          | Many refs: `O(n)`   | Hash: `O(1)`                  | `~ O(3n)`                |
+| padded `&str`        | [`~ O(n log n)`][pad-file]    | Single ref: `O(1)`  | Bin. search: `O(log n)`       | `~ O(n)`                 |
 
 This crate is an attempt to provide a solution with:
 
 1. **good, not perfect runtime performance**,
 2. very little, [one-time](https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed) compile-time preprocessing needed (just sorting),
 3. **essentially no additional startup cost** (unlike, say, constructing a `HashSet` at
-  runtime)[^2],
+  runtime)[^4],
 4. **binary sizes as small as possible**,
 5. **compile times as fast as possible**.
 
@@ -120,12 +123,7 @@ A simple slice is an obvious choice, and can be generated in a build script.
 ```rust
 static WORDS: &[&str] = &["abc", "def", "ghi", "jkl"];
 
-fn main() {
-    match WORDS.binary_search(&"ghi") {
-        Ok(i) => println!("Found at index: {:?}", i),
-        Err(i) => println!("Not found, could be inserted at: {:?}", i),
-    }
-}
+assert_eq!(WORDS.binary_search(&"ghi").unwrap(), 2);
 ```
 
 There are two large pains in this approach:
@@ -143,9 +141,8 @@ There are two large pains in this approach:
 
 ### Hash Set
 
-Regular [`HashSet`s](https://doc.rust-lang.org/std/collections/struct.HashSet.html) are
-not available at compile time. Crates like [`phf`](https://github.com/rust-phf/rust-phf)
-change that:
+Regular [`HashSet`s][hashset] are not available at compile time. Crates like
+[`phf`][phf-repo] change that:
 
 ```rust
 use phf::{phf_set, Set};
@@ -157,18 +154,52 @@ static WORDS: Set<&'static str> = phf_set! {
     "jkl"
 };
 
-fn main() {
-    if WORDS.contains(&"ghi") {
-        println!("Found!");
-    } else {
-        println!("Not found!");
-    }
-}
+assert!(WORDS.contains(&"ghi"))
 ```
 
 Similar downsides as for the slices case apply: very long compile times, and
 considerable binary bloat from smart pointers. A hash set ultimately is a slice with
 computed indices, so this is expected.
+
+### Finite State Transducer/Acceptor (Automaton)
+
+The [`fst`][fst-repo] crate is a fantastic candidate, [brought
+up](https://users.rust-lang.org/t/fast-string-lookup-in-a-single-str-containing-millions-of-unevenly-sized-substrings/98040/7?u=alexpovel)
+by its author (same author as [`ripgrep`](https://github.com/BurntSushi/ripgrep) and
+[`regex`](https://github.com/rust-lang/regex) fame):
+
+```rust
+use fst::Set; // Don't need FST, just FSA here
+
+static WORDS: &[&str] = &["abc", "def", "ghi", "jkl"];
+
+let set = Set::from_iter(WORDS.into_iter()).unwrap();
+assert!(set.contains("ghi"));
+```
+
+It offers:
+
+- [almost free (in time and space)
+  deserialization](https://users.rust-lang.org/t/fast-string-lookup-in-a-single-str-containing-millions-of-unevenly-sized-substrings/98040/9?u=alexpovel):
+  its serialization format is identical to its in-memory representation, unlike [other
+  solutions](#higher-order-data-structures), facilitating startup-up performance
+- compression[^3] (important for
+  [publishing](https://github.com/rust-lang/crates.io/issues/195)), making it the only
+  candidate in this comparison natively leading to *smaller* size than the original word
+  list
+- extension points (fuzzy and case-insensitive searching, bring-your-own-automaton etc.)
+- [faster lookups than this crate](#benchmarks), by a factor of about 2
+
+In some sense, for all intents and purposes, **`fst` is likely the best solution** for
+the niche use case mentioned above.
+
+For faster lookups than `fst` (closing the gap towards hash sets), [but giving up
+compression](https://users.rust-lang.org/t/fast-string-lookup-in-a-single-str-containing-millions-of-unevenly-sized-substrings/98040/13?u=alexpovel)
+([TANSTAAFL](https://en.wikipedia.org/wiki/No_such_thing_as_a_free_lunch)!), try an
+automaton from
+[`regex-automata`](https://docs.rs/regex-automata/latest/regex_automata/dfa/index.html#example-deserialize-a-dfa).
+Note that should your use case involve an initial decompression step, the slower runtime
+lookups but built-in compression of `fst` might still come out ahead in combination.
 
 ### Single, sorted and padded string
 
@@ -184,7 +215,8 @@ static WORDS: &str = "abc␣␣def␣␣ghi␣␣jklmn";
 
 The binary search implementation is then straightforward, as the elements are of known,
 fixed lengths (in this case, 5). This approach was [found to not perform
-well](#benchmarks).
+well](#benchmarks). Find its (bare-bones) implementation in the
+[benchmarks](./benches/main.rs).
 
 ### Higher-order data structures
 
@@ -268,15 +300,39 @@ The benchmarks are not terribly scientific (low sample sizes etc.), but serve as
 guideline and sanity check. Run them yourself from the repository root with `cargo
 install just && just bench`.
 
-[^1]: Note that pre-compile preprocessing is ordinarily performed only **a single
-time**, unless the word list itself changes. This column might therefore be moot, and
-considered essentially zero-cost. This viewpoint benefits this crate.
-[^2]: The [program this crate was initially designed
-for](https://github.com/alexpovel/betterletters) is sensitive to startup-time, as the
-program's main processing is *rapid*. Even just 50ms of startup time would be very
-noticeable, slowing down a program run by a factor of about 10.
-
 ## Note on name
 
 The 3-letter name is neat. Should you have a more meaningful, larger project that could
 make better use of it, let me know. I might move this crate to a different name.
+
+[^1]: Note that pre-compile preprocessing is ordinarily performed only **a single
+    time**, unless the word list itself changes. This column might be moot, and
+    considered essentially zero-cost. This viewpoint benefits this crate.
+[^2]: Building itself is `O(n)`, but the raw input might be unsorted (as is assumed for
+    all other approaches as well). Sorting is `O(n log n)`, so building the automaton
+    collapses to `O(n + n log n)` = `O(n log n)`.
+[^3]: As an automaton, the finite state transducer (in this case, finite state acceptor)
+    compresses all common prefixes, like a [trie](https://en.wikipedia.org/wiki/Trie),
+    **but also all suffixes**, unlike a prefix tree. That's a massive advantage should
+    compression be of concern. Languages like German benefit greatly. Take the example
+    of `übersehen`: the countless
+    [conjugations](https://www.duden.de/konjugation/uebersehen_uebersehen) are shared
+    among *all* words, so are only encoded once in the entire automaton. The prefix
+    `über` is also shared among many words, and is also only encoded once. Compression
+    is built-in.
+[^4]: The [program this crate was initially designed
+    for](https://github.com/alexpovel/betterletters) is sensitive to startup-time, as
+    the program's main processing is *rapid*. Even just 50ms of startup time would be
+    very noticeable, slowing down a program run by a factor of about 10.
+
+[slice-sort]: https://doc.rust-lang.org/std/primitive.slice.html#method.sort
+[fst-repo]: https://github.com/BurntSushi/fst
+[fst-build]: https://docs.rs/fst/0.4.7/fst/struct.SetBuilder.html
+[slice-binsearch]: https://doc.rust-lang.org/std/primitive.slice.html#method.binary_search
+[phf-repo]: https://github.com/rust-phf/rust-phf
+[hashset]: https://doc.rust-lang.org/std/collections/struct.HashSet.html
+[pad-file]: ./benches/main.rs
+[slice]: https://doc.rust-lang.org/std/primitive.slice.html
+[b4s-lib]: ./src/lib.rs
+[fst-lookup]: https://blog.burntsushi.net/transducers/#ordered-sets
+[fst-size]: https://blog.burntsushi.net/transducers/#the-dictionary
