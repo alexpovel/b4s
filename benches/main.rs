@@ -1,11 +1,20 @@
 use b4s::AsciiChar;
 use b4s::SortedString;
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use fst::Set;
 use itertools::Itertools;
 use std::collections::HashSet;
 
 fn generate_hashset(words: Vec<&str>) -> HashSet<&str> {
     HashSet::from_iter(words.iter().cloned())
+}
+
+fn generate_fst(words: Vec<&str>) -> Set<Vec<u8>> {
+    let mut builder = fst::SetBuilder::memory();
+    for word in words {
+        builder.insert(word).unwrap();
+    }
+    builder.into_set()
 }
 
 /// Turns a vector of strings into a single string like:
@@ -23,6 +32,17 @@ fn generate_padded_string_without_delimiter(
     }
 
     out
+}
+
+fn get_words() -> Vec<&'static str> {
+    let mut words = include_str!("de-short.txt")
+        .split('\n')
+        .filter(|w| !w.is_empty())
+        .collect::<Vec<_>>();
+
+    words.sort();
+
+    words
 }
 
 /// Implements binary search over the output of `generate_padded_string_without_delimiter`.
@@ -86,7 +106,7 @@ pub fn criterion_bench(c: &mut Criterion) {
         group.warm_up_time(std::time::Duration::from_secs(1)); // Default is 3s
     }
 
-    let words = include_str!("de-short.txt").split('\n').collect::<Vec<_>>();
+    let words = get_words();
 
     for length in &[
         10, 100, 1_000, 5_000, 10_000, 15_000, 20_000, 30_000, 50_000, 100_000, 200_000, 300_000,
@@ -94,7 +114,10 @@ pub fn criterion_bench(c: &mut Criterion) {
     ] {
         let words = compress_list(words.clone(), *length);
 
+        // Some hideous Hungarian notation going on, but whatever...
         let words_set = generate_hashset(words.clone());
+
+        let words_fst = generate_fst(words.clone());
 
         const DELIMITER: char = '\n';
         let words_single_string_with_delimiter = words.clone().join(&DELIMITER.to_string());
@@ -146,6 +169,12 @@ pub fn criterion_bench(c: &mut Criterion) {
             );
 
             group.bench_with_input(
+                BenchmarkId::new("fst", &parameter_string),
+                repr_word,
+                |b, i| b.iter(|| words_fst.contains(black_box(i))),
+            );
+
+            group.bench_with_input(
                 BenchmarkId::new("padded", &parameter_string),
                 repr_word,
                 |b, i| {
@@ -160,6 +189,8 @@ pub fn criterion_bench(c: &mut Criterion) {
             );
 
             group.bench_with_input(
+                // Be careful: this is *much* slower than all others, making the
+                // `violin.svg` plot and its linear axis look useless.
                 BenchmarkId::new("linear", &parameter_string),
                 repr_word,
                 |b, i| b.iter(|| words.contains(black_box(i))),
@@ -171,7 +202,8 @@ pub fn criterion_bench(c: &mut Criterion) {
             let results = vec![
                 words.binary_search(repr_word).is_ok(),
                 words_set.contains(repr_word),
-                sorted_string.binary_search(black_box(repr_word)).is_ok(),
+                sorted_string.binary_search(repr_word).is_ok(),
+                words_fst.contains(repr_word),
                 binary_search_padded(
                     repr_word,
                     &words_single_padded_string_without_delimiter,
