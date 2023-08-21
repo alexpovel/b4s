@@ -188,11 +188,13 @@ pub fn criterion_bench(c: &mut Criterion) {
                 },
             );
 
-            // group.bench_with_input(
-            //     BenchmarkId::new("linear", &parameter_string),
-            //     repr_word,
-            //     |b, i| b.iter(|| words.contains(black_box(i))),
-            // );
+            group.bench_with_input(
+                // Be careful: this is *much* slower than all others, making the
+                // `violin.svg` plot and its linear axis look useless.
+                BenchmarkId::new("linear", &parameter_string),
+                repr_word,
+                |b, i| b.iter(|| words.contains(black_box(i))),
+            );
 
             // `phf` not benchmarked as it's expected to be identical to stdlib's
             // `hashset`.
