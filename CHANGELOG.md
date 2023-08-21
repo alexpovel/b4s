@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.4](https://github.com/alexpovel/b4s/compare/v0.3.3...v0.3.4) (2023-08-21)
+
+
+### Bug Fixes
+
+* **ci:** Remove Cargo.lock requirement ([70e5918](https://github.com/alexpovel/b4s/commit/70e59184bfdc349c81532d83f5e46ac131814134))
+* Remove Cargo.lock ([91ea6ad](https://github.com/alexpovel/b4s/commit/91ea6adf1761c12c8728e094d7fb75788edd638b))
+
 ## [0.3.3](https://github.com/alexpovel/b4s/compare/v0.3.2...v0.3.3) (2023-08-05)
 
 
