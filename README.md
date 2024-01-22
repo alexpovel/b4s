@@ -3,7 +3,16 @@
 # b4s
 
 Binary Search Single Sorted String: Perform binary search on a single, delimited string
-slice of sorted but unevenly sized substrings.
+slice of sorted but unevenly sized substrings. This crate might be useful if you...
+
+- have a pre-sorted (`build.rs`, ...) list of words, and
+- need to check if a word is contained,
+- with low overhead, no allocations, minimal extra dependencies.
+
+In a drop-in manner, this crate replaces linear with binary search for corresponding
+speed-ups in suitable cases, delivering faster runtime at virtually no extra cost
+(writing this yourself is easy enough, but this crate is tested and fuzzed :-) ). See
+below for [more](#motivation), and [benchmarks](#benchmarks).
 
 The docs are best viewed via [docs.rs](https://docs.rs/b4s).
 
