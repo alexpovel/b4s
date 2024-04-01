@@ -51,7 +51,7 @@ jobs:
           --exclude-files 'benches/*'
       - name: Upload coverage reports to Codecov
         if: matrix.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
 
   release-please:
     name: Execute release chores
